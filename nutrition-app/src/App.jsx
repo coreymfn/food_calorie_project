@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { searchFoods, getFoodDetails } from "./api/usda";
+import MaintenanceCaloriesForm from "./assets/form";
 
 function App() {
   // Food search state
@@ -279,6 +280,8 @@ function App() {
   return (
     <main>
       <h1>Nutrition App</h1>
+        
+      <MaintenanceCaloriesForm />
 
       {/* FOOD SEARCH */}
       <form onSubmit={handleSearch}>

@@ -1,5 +1,7 @@
+// height must be in cms, and weight needs to be in kilos
+
 function MaintenanceCalories(height, weight, gender, activity, age) {
-  if (activity === "Sedentary") {
+  if (activity === "sedentary") {
     activity = 1.2;
   } else if (activity === "lightly active") {
     activity = 1.375;
