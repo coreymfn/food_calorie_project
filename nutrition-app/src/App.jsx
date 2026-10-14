@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { searchFoods, getFoodDetails } from "./api/usda";
 import MaintenanceCaloriesForm from "./assets/form";
-
+import {
+  getNutritionTotals,
+  nutrientsToTrack,
+} from "./assets/nutritionTracker";
+import ProteinCalculator from "./assets/ProteinCalculate";
 function App() {
   // Food search state
   const [query, setQuery] = useState("");
@@ -22,7 +26,7 @@ function App() {
       return [];
     }
   });
-
+  const dailyTotals = getNutritionTotals(diary);
   const [selectedMeal, setSelectedMeal] = useState("Breakfast");
 
   // Search for foods
@@ -78,31 +82,38 @@ function App() {
     function findNutrient(names) {
       return nutrients.find((item) => {
         const name =
-          item.nutrient?.name ?? item.nutrientName ?? item.name ?? "";
+          item.nutrient?.name ??
+          item.nutrientName ??
+          item.name ??
+          "";
 
         return names.some(
           (nutrientName) =>
-            name === nutrientName || name.startsWith(`${nutrientName} (`),
+            name === nutrientName ||
+            name.startsWith(`${nutrientName} (`),
         );
       });
     }
 
     function findAmount(names) {
       const nutrient = findNutrient(names);
-
       return Number(nutrient?.amount ?? nutrient?.value ?? 0);
     }
 
-    // Find an energy value and prefer kcal over kJ.
     const energyCandidates = nutrients.filter((item) => {
-      const name = item.nutrient?.name ?? item.nutrientName ?? item.name ?? "";
+      const name =
+        item.nutrient?.name ??
+        item.nutrientName ??
+        item.name ??
+        "";
 
       return name === "Energy" || name.startsWith("Energy (");
     });
 
     const caloriesNutrient =
       energyCandidates.find((item) => {
-        const unit = item.nutrient?.unitName ?? item.unitName ?? "";
+        const unit =
+          item.nutrient?.unitName ?? item.unitName ?? "";
 
         return unit.toLowerCase() === "kcal";
       }) ?? energyCandidates[0];
@@ -112,36 +123,46 @@ function App() {
     );
 
     const calorieUnit =
-      caloriesNutrient?.nutrient?.unitName ?? caloriesNutrient?.unitName ?? "";
+      caloriesNutrient?.nutrient?.unitName ??
+      caloriesNutrient?.unitName ??
+      "";
 
     if (calorieUnit.toLowerCase() === "kj") {
       calories /= 4.184;
     }
 
-    // Many non-branded USDA records provide values per 100 g.
     const per100g = {
       calories,
       protein: findAmount(["Protein"]),
       carbs: findAmount(["Carbohydrate, by difference"]),
       fat: findAmount(["Total lipid (fat)"]),
+      saturatedFat: findAmount(["Fatty acids, total saturated"]),
+      fiber: findAmount(["Fiber, total dietary"]),
+      sugar: findAmount(["Sugars, total including NLEA", "Sugars, total"]),
+      sodium: findAmount(["Sodium"]),
     };
 
-    // Branded products may provide nutrition per label serving.
     const label = food.labelNutrients;
 
-    if (food.dataType === "Branded" && label && Object.keys(label).length > 0) {
+    if (
+      food.dataType === "Branded" &&
+      label &&
+      Object.keys(label).length > 0
+    ) {
       const servingSize = Number(food.servingSize);
       const servingUnit = (food.servingSizeUnit || "").toLowerCase();
 
-      // Estimate missing label values from per-100 g values
-      // only when the serving weight is known in grams.
       const fallbackFactor =
-        servingUnit === "g" && servingSize > 0 ? servingSize / 100 : 0;
+        servingUnit === "g" && servingSize > 0
+          ? servingSize / 100
+          : 0;
 
       function labelAmount(key, fallback) {
         const value = label[key]?.value;
 
-        return value != null ? Number(value) : fallback * fallbackFactor;
+        return value != null
+          ? Number(value)
+          : fallback * fallbackFactor;
       }
 
       return {
@@ -149,6 +170,13 @@ function App() {
         protein: labelAmount("protein", per100g.protein),
         carbs: labelAmount("carbohydrates", per100g.carbs),
         fat: labelAmount("fat", per100g.fat),
+        saturatedFat: labelAmount(
+          "saturatedFat",
+          per100g.saturatedFat,
+        ),
+        fiber: labelAmount("fiber", per100g.fiber),
+        sugar: labelAmount("sugars", per100g.sugar),
+        sodium: labelAmount("sodium", per100g.sodium),
       };
     }
 
@@ -246,22 +274,44 @@ function App() {
       return;
     }
 
+    // Get all available nutrients for the selected food.
+    const allNutrition = getNutrition(selectedFood);
+
     const entry = {
       id: crypto.randomUUID(),
       name: selectedFood.description,
       meal: selectedMeal,
       servings,
       servingDescription: selectedServing.label,
+
+      // Nutrients calculated for the selected serving and quantity
       calories: estimatedNutrition.calories,
       protein: estimatedNutrition.protein,
       carbs: estimatedNutrition.carbs,
       fat: estimatedNutrition.fat,
+
+      // Additional nutrients, scaled to the selected quantity
+      saturatedFat:
+        (allNutrition.saturatedFat ?? 0) *
+        selectedServing.factor *
+        servings,
+      fiber:
+        (allNutrition.fiber ?? 0) *
+        selectedServing.factor *
+        servings,
+      sugar:
+        (allNutrition.sugar ?? 0) *
+        selectedServing.factor *
+        servings,
+      sodium:
+        (allNutrition.sodium ?? 0) *
+        selectedServing.factor *
+        servings,
     };
 
     const updatedDiary = [...diary, entry];
 
     setDiary(updatedDiary);
-
     localStorage.setItem("nutritionDiary", JSON.stringify(updatedDiary));
 
     setError("");
@@ -282,7 +332,7 @@ function App() {
       <h1>Nutrition App</h1>
         
       <MaintenanceCaloriesForm />
-
+      <ProteinCalculator />
       {/* FOOD SEARCH */}
       <form onSubmit={handleSearch}>
         <label htmlFor="food-search">Search for a food</label>
@@ -410,6 +460,20 @@ function App() {
         </section>
       )}
 
+      {/* DAILY NUTRITION TOTALS */}
+      <section>
+        <h2>Daily Nutrition Totals</h2>
+        <ul>
+          {nutrientsToTrack.map((nutrient) => (
+            <li key={nutrient.key}>
+              {nutrient.label}:{" "}
+              {Number(dailyTotals[nutrient.key] ?? 0).toFixed(1)}
+              {" "}
+              {nutrient.unit}
+            </li>
+          ))}
+        </ul>
+      </section>
       {/* FOOD DIARY */}
       <section>
         <h2>Food Diary</h2>
@@ -439,6 +503,14 @@ function App() {
                       Protein: {entry.protein.toFixed(1)} g{" | "}
                       Carbs: {entry.carbs.toFixed(1)} g{" | "}
                       Fat: {entry.fat.toFixed(1)} g{" "}
+                      {" | "}
+                      Saturated Fat: {(entry.saturatedFat ?? 0).toFixed(1)} g
+                      {" | "}
+                      Fiber: {(entry.fiber ?? 0).toFixed(1)} g
+                      {" | "}
+                      Sugar: {(entry.sugar ?? 0).toFixed(1)} g
+                      {" | "}
+                      Sodium: {(entry.sodium ?? 0).toFixed(1)} mg
                       <button
                         type="button"
                         onClick={() => removeFromDiary(entry.id)}
