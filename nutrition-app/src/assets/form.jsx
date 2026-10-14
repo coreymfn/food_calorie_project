@@ -126,13 +126,13 @@ function MaintenanceCaloriesForm() {
               Sedentary — little or no exercise
             </option>
             <option value="lightly active">
-              Lightly Active — light exercise 1–3 days/week
+              Lightly Active — light exercise 1-3 days/week
             </option>
             <option value="moderately active">
-              Moderately Active — moderate exercise 3–5 days/week
+              Moderately Active — moderate exercise 3-5 days/week
             </option>
             <option value="very active">
-              Very Active — hard exercise 6–7 days/week
+              Very Active — hard exercise 6-7 days/week
             </option>
             <option value="extra active">
               Extra Active — very hard exercise or physical job
@@ -206,7 +206,6 @@ function MaintenanceCaloriesForm() {
                   </strong>
                 </p>
               )}
-
               {result.warnings?.map((warning, index) => (
                 <p key={index}>{warning}</p>
               ))}
