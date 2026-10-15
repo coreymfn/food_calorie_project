@@ -791,3 +791,108 @@ button:disabled {
     padding: 13px;
   }
 }
+
+
+
+/* ==================================
+   DIARY DATE PICKER
+================================== */
+
+#diary-date {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  margin: 10px 0 20px;
+
+  color: #354b38;
+  background-color: #f5f4e9;
+  border: 2px solid #b7c9ad;
+  border-radius: 12px;
+
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+#diary-date:hover {
+  background-color: #eaf0e3;
+  border-color: #799b78;
+}
+
+#diary-date:focus {
+  outline: none;
+  border-color: #547d59;
+  box-shadow: 0 0 0 4px rgba(84, 125, 89, 0.18);
+}
+
+#diary-date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 5px;
+}
+
+/* ==================================
+   FOOD DIARY ENTRIES
+================================== */
+
+.diary-meal {
+  margin-top: 24px;
+}
+
+.diary-meal h3 {
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  color: #354b38;
+  border-bottom: 2px solid #dce6d5;
+}
+
+.diary-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  padding: 16px;
+  margin-bottom: 12px;
+
+  background: #f8f7f0;
+  border: 1px solid #dce3d5;
+  border-radius: 12px;
+}
+
+.diary-entry p {
+  margin: 6px 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.diary-entry button {
+  flex-shrink: 0;
+}
+
+/* ==================================
+   RESPONSIVE DIARY
+================================== */
+
+@media (max-width: 600px) {
+  #diary-date {
+    max-width: 100%;
+  }
+
+  .diary-entry {
+    flex-direction: column;
+  }
+
+  .diary-entry button {
+    align-self: flex-start;
+  }
+}

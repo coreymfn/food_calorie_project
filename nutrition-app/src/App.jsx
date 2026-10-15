@@ -24,17 +24,12 @@ function getSavedDiary() {
   try {
     const savedDiary = localStorage.getItem("nutritionDiary");
 
-    if (!savedDiary) {
-      return [];
-    }
+    if (!savedDiary) return [];
 
     const parsedDiary = JSON.parse(savedDiary);
 
-    if (!Array.isArray(parsedDiary)) {
-      return [];
-    }
+    if (!Array.isArray(parsedDiary)) return [];
 
-    // Keep existing entries and add dates to older entries.
     return parsedDiary.map((entry) => ({
       ...entry,
       date: entry.date || getLocalDateString(),
@@ -65,9 +60,7 @@ function getNutrition(food) {
     sodium: 0,
   };
 
-  if (!food) {
-    return emptyNutrition;
-  }
+  if (!food) return emptyNutrition;
 
   const labels = food.labelNutrients;
 
@@ -99,9 +92,7 @@ function getNutrition(food) {
 
     const amount = Number(nutrient.amount ?? nutrient.value ?? 0);
 
-    if (!Number.isFinite(amount)) {
-      continue;
-    }
+    if (!Number.isFinite(amount)) continue;
 
     const unit = (
       nutrient.nutrient?.unitName ??
@@ -192,6 +183,13 @@ function getServingOptions(food) {
   return [{ label: "100 g", factor: 1 }, ...portions];
 }
 
+function createEntryId() {
+  return typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+}
+
 function App() {
   // Food search state
   const [pageNumber, setPageNumber] = useState(1);
@@ -210,12 +208,12 @@ function App() {
   // Maintenance-calorie goal state
   const [goalResult, setGoalResult] = useState(getSavedGoalResult);
   const [showCustomFood, setShowCustomFood] = useState(false);
+
   // Food diary state
   const [diary, setDiary] = useState(getSavedDiary);
   const [selectedMeal, setSelectedMeal] = useState("Breakfast");
   const [selectedDate, setSelectedDate] = useState(getLocalDateString);
 
-  // Only show entries recorded for the selected date.
   const selectedEntries = diary.filter((entry) => entry.date === selectedDate);
 
   const dailyTotals = getNutritionTotals(selectedEntries);
@@ -351,7 +349,9 @@ function App() {
       ? Object.fromEntries(
           nutrientsToTrack.map(({ key }) => [
             key,
-            (Number(nutrition[key]) || 0) * selectedServing.factor * servings,
+            (Number(nutrition[key]) || 0) *
+              selectedServing.factor *
+              (Number(servings) || 0),
           ]),
         )
       : null;
@@ -393,61 +393,60 @@ function App() {
       return;
     }
 
-    // Generate the ID inside the click handler.
-    const entryId =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`;
-
-    const nutrition = getNutrition(selectedFood);
+    const foodNutrition = getNutrition(selectedFood);
+    const factor = selectedServing?.factor ?? 1;
 
     const newEntry = {
-      id: entryId,
+      id: createEntryId(),
       foodId: selectedFood.fdcId,
       name: selectedFood.description,
       brand: selectedFood.brandOwner ?? "",
       meal: selectedMeal,
       date: selectedDate,
       servings: servingCount,
-      calories: (nutrition.calories ?? 0) * servingCount,
-      protein: (nutrition.protein ?? 0) * servingCount,
-      carbs: (nutrition.carbs ?? 0) * servingCount,
-      fat: (nutrition.fat ?? 0) * servingCount,
-      saturatedFat: (nutrition.saturatedFat ?? 0) * servingCount,
-      fiber: (nutrition.fiber ?? 0) * servingCount,
-      sugar: (nutrition.sugar ?? 0) * servingCount,
-      sodium: (nutrition.sodium ?? 0) * servingCount,
+      servingDescription: selectedServing?.label ?? "serving",
+      calories: (foodNutrition.calories ?? 0) * factor * servingCount,
+      protein: (foodNutrition.protein ?? 0) * factor * servingCount,
+      carbs: (foodNutrition.carbs ?? 0) * factor * servingCount,
+      fat: (foodNutrition.fat ?? 0) * factor * servingCount,
+      saturatedFat: (foodNutrition.saturatedFat ?? 0) * factor * servingCount,
+      fiber: (foodNutrition.fiber ?? 0) * factor * servingCount,
+      sugar: (foodNutrition.sugar ?? 0) * factor * servingCount,
+      sodium: (foodNutrition.sodium ?? 0) * factor * servingCount,
     };
 
-    setDiary((previousDiary) => [...previousDiary, newEntry]);
+    saveDiary([...diary, newEntry]);
 
     setSelectedFood(null);
-    setServings("1");
+    setServings(1);
     setSelectedServingIndex(0);
     setError("");
   }
+
   function addCustomFoodToDiary(food, meal) {
     const newEntry = {
-      id: crypto.randomUUID(),
+      id: createEntryId(),
       name: food.name,
-      meal: meal,
+      meal,
       date: selectedDate,
       servings: 1,
-      servingDescription: food.serving,
-      calories: food.calories,
-      protein: food.protein,
-      carbs: food.carbs,
-      fat: food.fat,
-      saturatedFat: food.saturatedFat,
-      fiber: food.fiber,
-      sugar: food.sugar,
-      sodium: food.sodium,
+      servingDescription: food.serving || "serving",
+      calories: Number(food.calories) || 0,
+      protein: Number(food.protein) || 0,
+      carbs: Number(food.carbs) || 0,
+      fat: Number(food.fat) || 0,
+      saturatedFat: Number(food.saturatedFat) || 0,
+      fiber: Number(food.fiber) || 0,
+      sugar: Number(food.sugar) || 0,
+      sodium: Number(food.sodium) || 0,
     };
 
     saveDiary([...diary, newEntry]);
   }
+
   function removeFromDiary(id) {
     const updatedDiary = diary.filter((entry) => entry.id !== id);
+
     saveDiary(updatedDiary);
   }
 
@@ -587,9 +586,9 @@ function App() {
             <select
               id="serving-size"
               value={selectedServingIndex}
-              onChange={(event) => {
-                setSelectedServingIndex(Number(event.target.value));
-              }}
+              onChange={(event) =>
+                setSelectedServingIndex(Number(event.target.value))
+              }
             >
               {servingOptions.map((option, index) => (
                 <option key={`${option.label}-${index}`} value={index}>
@@ -607,8 +606,8 @@ function App() {
               step="0.1"
               value={servings}
               onChange={(event) => {
-                const value = Number(event.target.value);
-                setServings(Number.isFinite(value) && value >= 0 ? value : 0);
+                const value = event.target.value;
+                setServings(value === "" ? "" : Number(value));
               }}
             />
 
@@ -644,6 +643,8 @@ function App() {
           </div>
         )}
       </section>
+
+      {/* CUSTOM FOODS */}
       <button
         type="button"
         onClick={() => setShowCustomFood((previous) => !previous)}
@@ -657,6 +658,7 @@ function App() {
           onAddToDiary={addCustomFoodToDiary}
         />
       )}
+
       {/* DAILY TOTALS */}
       <section className="panel">
         <h2>Daily Nutrition</h2>
@@ -699,9 +701,7 @@ function App() {
               (entry) => entry.meal === meal,
             );
 
-            if (mealEntries.length === 0) {
-              return null;
-            }
+            if (mealEntries.length === 0) return null;
 
             return (
               <div className="diary-meal" key={meal}>
