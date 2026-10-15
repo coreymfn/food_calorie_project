@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-
+import CustomFood from "./assets/CustomFood";
 import { searchFoods, getFoodDetails } from "./api/usda";
 import MaintenanceCaloriesForm from "./assets/form";
 import {
@@ -205,7 +205,7 @@ function App() {
 
   // Maintenance-calorie goal state
   const [goalResult, setGoalResult] = useState(getSavedGoalResult);
-
+  const [showCustomFood, setShowCustomFood] = useState(false);
   // Food diary state
   const [diary, setDiary] = useState(getSavedDiary);
   const [selectedMeal, setSelectedMeal] = useState("Breakfast");
@@ -350,7 +350,26 @@ function App() {
     setSelectedServingIndex(0);
     setError("");
   }
+  function addCustomFoodToDiary(food, meal) {
+    const newEntry = {
+      id: crypto.randomUUID(),
+      name: food.name,
+      meal: meal,
+      date: selectedDate,
+      servings: 1,
+      servingDescription: food.serving,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      saturatedFat: food.saturatedFat,
+      fiber: food.fiber,
+      sugar: food.sugar,
+      sodium: food.sodium,
+    };
 
+    saveDiary([...diary, newEntry]);
+  }
   function removeFromDiary(id) {
     const updatedDiary = diary.filter((entry) => entry.id !== id);
     saveDiary(updatedDiary);
@@ -482,7 +501,19 @@ function App() {
           </div>
         )}
       </section>
+      <button
+        type="button"
+        onClick={() => setShowCustomFood((previous) => !previous)}
+      >
+        {showCustomFood ? "Hide Custom Foods" : "Show Custom Foods"}
+      </button>
 
+      {showCustomFood && (
+        <CustomFood
+          selectedMeal={selectedMeal}
+          onAddToDiary={addCustomFoodToDiary}
+        />
+      )}
       {/* DAILY TOTALS */}
       <section className="panel">
         <h2>Daily Nutrition</h2>
