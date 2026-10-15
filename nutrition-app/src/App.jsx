@@ -1,59 +1,137 @@
-import { useState } from "react";
-import { searchFoods, getFoodDetails } from "./api/usda";
+import { useEffect, useState } from "react";
+import { searchFoods, getFoodDetails } from "./api/fatsecret";
+import "./App.css";
 
-function App() {
-  // Food search state
+const MEALS = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+
+const emptyNutrition = {
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+};
+
+const DEFAULT_GOALS = {
+  calories: 2000,
+  protein: 150,
+  carbs: 250,
+  fat: 65,
+};
+
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function readSavedDiary() {
+  try {
+    const saved = localStorage.getItem("nutritionDiary");
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function readSavedGoals() {
+  try {
+    const saved = localStorage.getItem("nutritionGoals");
+    return saved ? { ...DEFAULT_GOALS, ...JSON.parse(saved) } : DEFAULT_GOALS;
+  } catch {
+    return DEFAULT_GOALS;
+  }
+}
+
+function formatNumber(value, digits = 1) {
+  const number = Number(value) || 0;
+  return Number.isInteger(number) ? String(number) : number.toFixed(digits);
+}
+
+function FoodImage({ src, alt, className = "" }) {
+  const [failedSrc, setFailedSrc] = useState("");
+
+  if (!src || failedSrc === src) {
+    return (
+      <div
+        className={`food-image-placeholder ${className}`}
+        aria-label="Food image unavailable"
+      >
+        <span>🍽️</span>
+        <small>No image</small>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      className={className}
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailedSrc(src)}
+    />
+  );
+}
+
+export default function App() {
   const [query, setQuery] = useState("");
   const [foods, setFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
+
   const [servings, setServings] = useState(1);
   const [selectedServingIndex, setSelectedServingIndex] = useState(0);
+  const [selectedMeal, setSelectedMeal] = useState("Breakfast");
+
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // Food diary state
-  const [diary, setDiary] = useState(() => {
-    try {
-      const savedDiary = localStorage.getItem("nutritionDiary");
-      return savedDiary ? JSON.parse(savedDiary) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [diary, setDiary] = useState(readSavedDiary);
+  const [goals, setGoals] = useState(readSavedGoals);
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
 
-  const [selectedMeal, setSelectedMeal] = useState("Breakfast");
+  useEffect(() => {
+    localStorage.setItem("nutritionDiary", JSON.stringify(diary));
+  }, [diary]);
 
-  // Search for foods
+  useEffect(() => {
+    localStorage.setItem("nutritionGoals", JSON.stringify(goals));
+  }, [goals]);
+
   async function handleSearch(event) {
     event.preventDefault();
 
-    if (!query.trim()) {
-      setError("Enter a food to search for.");
+    const searchTerm = query.trim();
+
+    if (!searchTerm) {
+      setError("Enter a food name to search.");
       return;
     }
 
     setLoading(true);
     setError("");
-    setFoods([]);
+    setHasSearched(true);
     setSelectedFood(null);
+    setFoods([]);
 
     try {
-      const results = await searchFoods(query.trim());
+      const results = await searchFoods(searchTerm);
       setFoods(results);
 
       if (results.length === 0) {
-        setError("No matching foods found.");
+        setError("No foods found. Try a different search.");
       }
     } catch (err) {
-      setError(err.message || "Search failed.");
+      setError(err.message || "Food search failed.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Load details for the selected food
-  async function handleSelectFood(fdcId) {
+  async function handleSelectFood(foodId) {
     setDetailsLoading(true);
     setError("");
     setSelectedFood(null);
@@ -61,8 +139,19 @@ function App() {
     setSelectedServingIndex(0);
 
     try {
-      const details = await getFoodDetails(fdcId);
-      setSelectedFood(details);
+      const food = await getFoodDetails(foodId);
+
+      setSelectedFood(food);
+
+      const defaultIndex = food.servings.findIndex(
+        (serving) => serving.isDefault,
+      );
+
+      setSelectedServingIndex(defaultIndex >= 0 ? defaultIndex : 0);
+
+      if (food.servings.length === 0) {
+        setError("This food has no serving nutrition information available.");
+      }
     } catch (err) {
       setError(err.message || "Could not load food details.");
     } finally {
@@ -70,388 +159,552 @@ function App() {
     }
   }
 
-  // Extract nutrition information from USDA food data
-  function getNutrition(food) {
-    const nutrients = food.foodNutrients ?? [];
+  const servingOptions = selectedFood?.servings ?? [];
 
-    function findNutrient(names) {
-      return nutrients.find((item) => {
-        const name =
-          item.nutrient?.name ?? item.nutrientName ?? item.name ?? "";
+  const selectedServing = servingOptions[selectedServingIndex] ?? null;
 
-        return names.some(
-          (nutrientName) =>
-            name === nutrientName || name.startsWith(`${nutrientName} (`),
-        );
-      });
-    }
-
-    function findAmount(names) {
-      const nutrient = findNutrient(names);
-
-      return Number(nutrient?.amount ?? nutrient?.value ?? 0);
-    }
-
-    // Find an energy value and prefer kcal over kJ.
-    const energyCandidates = nutrients.filter((item) => {
-      const name = item.nutrient?.name ?? item.nutrientName ?? item.name ?? "";
-
-      return name === "Energy" || name.startsWith("Energy (");
-    });
-
-    const caloriesNutrient =
-      energyCandidates.find((item) => {
-        const unit = item.nutrient?.unitName ?? item.unitName ?? "";
-
-        return unit.toLowerCase() === "kcal";
-      }) ?? energyCandidates[0];
-
-    let calories = Number(
-      caloriesNutrient?.amount ?? caloriesNutrient?.value ?? 0,
-    );
-
-    const calorieUnit =
-      caloriesNutrient?.nutrient?.unitName ?? caloriesNutrient?.unitName ?? "";
-
-    if (calorieUnit.toLowerCase() === "kj") {
-      calories /= 4.184;
-    }
-
-    // Many non-branded USDA records provide values per 100 g.
-    const per100g = {
-      calories,
-      protein: findAmount(["Protein"]),
-      carbs: findAmount(["Carbohydrate, by difference"]),
-      fat: findAmount(["Total lipid (fat)"]),
-    };
-
-    // Branded products may provide nutrition per label serving.
-    const label = food.labelNutrients;
-
-    if (food.dataType === "Branded" && label && Object.keys(label).length > 0) {
-      const servingSize = Number(food.servingSize);
-      const servingUnit = (food.servingSizeUnit || "").toLowerCase();
-
-      // Estimate missing label values from per-100 g values
-      // only when the serving weight is known in grams.
-      const fallbackFactor =
-        servingUnit === "g" && servingSize > 0 ? servingSize / 100 : 0;
-
-      function labelAmount(key, fallback) {
-        const value = label[key]?.value;
-
-        return value != null ? Number(value) : fallback * fallbackFactor;
+  const estimatedNutrition = selectedServing
+    ? {
+        calories: selectedServing.calories * servings,
+        protein: selectedServing.protein * servings,
+        carbs: selectedServing.carbs * servings,
+        fat: selectedServing.fat * servings,
       }
+    : { ...emptyNutrition };
 
-      return {
-        calories: labelAmount("calories", per100g.calories),
-        protein: labelAmount("protein", per100g.protein),
-        carbs: labelAmount("carbohydrates", per100g.carbs),
-        fat: labelAmount("fat", per100g.fat),
-      };
-    }
-
-    return per100g;
-  }
-
-  // Build serving options for the selected food
-  function getServingOptions(food) {
-    const isBranded = food.dataType === "Branded";
-    const servingSize = Number(food.servingSize);
-    const servingUnit = food.servingSizeUnit || "g";
-
-    // Use the labeled serving when branded label nutrients exist.
-    if (
-      isBranded &&
-      food.labelNutrients &&
-      Object.keys(food.labelNutrients).length > 0
-    ) {
-      const label = food.householdServingFullText || "1 labeled serving";
-
-      const sizeText =
-        servingSize > 0 ? ` (${servingSize} ${servingUnit})` : "";
-
-      return [
-        {
-          label: `${label}${sizeText}`,
-          factor: 1,
-        },
-      ];
-    }
-
-    // Otherwise, use the branded product's gram serving if available.
-    if (isBranded && servingSize > 0 && servingUnit.toLowerCase() === "g") {
-      return [
-        {
-          label: `1 serving (${servingSize} g)`,
-          factor: servingSize / 100,
-        },
-      ];
-    }
-
-    // Use household portions supplied by USDA when available.
-    const portions = (food.foodPortions ?? [])
-      .filter((portion) => Number(portion.gramWeight) > 0)
-      .map((portion) => {
-        const amount = Number(portion.amount) || 1;
-        const description =
-          portion.portionDescription ||
-          portion.modifier ||
-          portion.measureUnit?.name ||
-          "serving";
-
-        return {
-          label: `${amount} ${description} (${portion.gramWeight} g)`,
-          factor: Number(portion.gramWeight) / 100,
-        };
-      });
-
-    if (portions.length > 0) {
-      return portions;
-    }
-
-    // Fallback when no usable serving information is available.
-    return [
-      {
-        label: "100 g",
-        factor: 1,
-      },
-    ];
-  }
-
-  // Nutrition for the selected food
-  const nutrition = selectedFood ? getNutrition(selectedFood) : null;
-
-  const servingOptions = selectedFood ? getServingOptions(selectedFood) : [];
-
-  const selectedServing =
-    servingOptions[selectedServingIndex] ?? servingOptions[0];
-
-  // Calculate nutrition for the selected serving and quantity.
-  const estimatedNutrition =
-    nutrition && selectedServing
-      ? {
-          calories: nutrition.calories * selectedServing.factor * servings,
-          protein: nutrition.protein * selectedServing.factor * servings,
-          carbs: nutrition.carbs * selectedServing.factor * servings,
-          fat: nutrition.fat * selectedServing.factor * servings,
-        }
-      : null;
-
-  // Add the selected food to the diary
   function addToDiary() {
-    if (!selectedFood || !estimatedNutrition || servings <= 0) {
-      setError("Enter a quantity greater than zero.");
+    if (!selectedFood || !selectedServing) {
+      setError("Select a food with serving information first.");
       return;
     }
 
     const entry = {
       id: crypto.randomUUID(),
-      name: selectedFood.description,
+      foodId: selectedFood.id,
+      name: selectedFood.name,
+      brand: selectedFood.brand,
+      image: selectedFood.image,
       meal: selectedMeal,
+      date: selectedDate,
       servings,
-      servingDescription: selectedServing.label,
+      servingDescription: selectedServing.description,
       calories: estimatedNutrition.calories,
       protein: estimatedNutrition.protein,
       carbs: estimatedNutrition.carbs,
       fat: estimatedNutrition.fat,
     };
 
-    const updatedDiary = [...diary, entry];
-
-    setDiary(updatedDiary);
-
-    localStorage.setItem("nutritionDiary", JSON.stringify(updatedDiary));
-
+    setDiary((currentDiary) => [...currentDiary, entry]);
     setError("");
   }
 
-  // Remove a food from the diary
-  function removeFromDiary(id) {
-    const updatedDiary = diary.filter((entry) => entry.id !== id);
-
-    setDiary(updatedDiary);
-
-    localStorage.setItem("nutritionDiary", JSON.stringify(updatedDiary));
+  function removeFromDiary(entryId) {
+    setDiary((currentDiary) =>
+      currentDiary.filter((entry) => entry.id !== entryId),
+    );
   }
 
-  // Render the app
+  const selectedEntries = diary.filter((entry) => entry.date === selectedDate);
+
+  function clearDiary() {
+    const confirmed = window.confirm(
+      `Are you sure you want to clear the diary for ${selectedDate}?`,
+    );
+
+    if (confirmed) {
+      setDiary((currentDiary) =>
+        currentDiary.filter((entry) => entry.date !== selectedDate),
+      );
+    }
+  }
+
+  const dailyTotals = selectedEntries.reduce(
+    (totals, entry) => ({
+      calories: totals.calories + (Number(entry.calories) || 0),
+      protein: totals.protein + (Number(entry.protein) || 0),
+      carbs: totals.carbs + (Number(entry.carbs) || 0),
+      fat: totals.fat + (Number(entry.fat) || 0),
+    }),
+    { ...emptyNutrition },
+  );
+
+  const goalItems = [
+    {
+      key: "calories",
+      label: "Calories",
+      unit: "kcal",
+      current: dailyTotals.calories,
+      goal: Number(goals.calories) || 0,
+    },
+    {
+      key: "protein",
+      label: "Protein",
+      unit: "g",
+      current: dailyTotals.protein,
+      goal: Number(goals.protein) || 0,
+    },
+    {
+      key: "carbs",
+      label: "Carbohydrates",
+      unit: "g",
+      current: dailyTotals.carbs,
+      goal: Number(goals.carbs) || 0,
+    },
+    {
+      key: "fat",
+      label: "Fat",
+      unit: "g",
+      current: dailyTotals.fat,
+      goal: Number(goals.fat) || 0,
+    },
+  ];
+
   return (
-    <main>
-      <h1>Nutrition App</h1>
+    <main className="app">
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">YOUR DAILY FOOD TRACKER</p>
+          <h1>Nutrition Diary</h1>
+          <p className="subtitle">
+            Search foods, track portions, and keep up with your nutrition.
+          </p>
+        </div>
+      </header>
 
-      {/* FOOD SEARCH */}
-      <form onSubmit={handleSearch}>
-        <label htmlFor="food-search">Search for a food</label>
-
-        <input
-          id="food-search"
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="e.g. banana"
-        />
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Searching..." : "Search"}
-        </button>
-      </form>
-
-      {error && <p role="alert">{error}</p>}
-
-      {/* SEARCH RESULTS */}
-      <h2>Search Results</h2>
-
-      <ul>
-        {foods.map((food) => (
-          <li key={food.fdcId}>
-            <span>
-              {food.description} ({food.dataType})
-            </span>{" "}
-            <button
-              type="button"
-              onClick={() => handleSelectFood(food.fdcId)}
-              disabled={detailsLoading}
-            >
-              View Nutrition
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {detailsLoading && <p>Loading nutrition details...</p>}
-
-      {/* SELECTED FOOD AND NUTRITION */}
-      {selectedFood && nutrition && (
-        <section>
-          <h2>{selectedFood.description}</h2>
-
-          <p>Food category: {selectedFood.dataType}</p>
-
-          <h3>
-            {selectedFood.dataType === "Branded"
-              ? "Nutrition per labeled serving"
-              : "Nutrition per 100 g"}
-          </h3>
-
-          <ul>
-            <li>Calories: {nutrition.calories.toFixed(1)} kcal</li>
-            <li>Protein: {nutrition.protein.toFixed(1)} g</li>
-            <li>Carbohydrates: {nutrition.carbs.toFixed(1)} g</li>
-            <li>Fat: {nutrition.fat.toFixed(1)} g</li>
-          </ul>
-
-          {/* SERVING SIZE SELECTOR */}
-          <label htmlFor="serving-option">Serving size</label>
-
-          <select
-            id="serving-option"
-            value={selectedServingIndex}
-            onChange={(event) => {
-              setSelectedServingIndex(Number(event.target.value));
-              setServings(1);
-            }}
+      {error && (
+        <div className="message error-message" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="message-close"
+            onClick={() => setError("")}
+            aria-label="Dismiss error"
           >
-            {servingOptions.map((option, index) => (
-              <option key={`${option.label}-${index}`} value={index}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            ×
+          </button>
+        </div>
+      )}
 
-          {/* QUANTITY */}
-          <label htmlFor="servings">Number of servings</label>
+      <section className="panel search-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">FOOD DATABASE</p>
+            <h2>Find a food</h2>
+          </div>
+        </div>
 
+        <form className="search-form" onSubmit={handleSearch}>
           <input
-            id="servings"
-            type="number"
-            min="0.1"
-            step="0.1"
-            value={servings}
-            onChange={(event) =>
-              setServings(Math.max(0, Number(event.target.value)))
-            }
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Try banana, oatmeal, or a brand name..."
+            aria-label="Search for a food"
           />
 
-          {/* CALCULATED NUTRITION */}
-          <h3>Estimated nutrition for this quantity</h3>
+          <button type="submit" disabled={loading}>
+            {loading ? "Searching..." : "Search"}
+          </button>
+        </form>
 
-          {estimatedNutrition && (
-            <ul>
-              <li>Calories: {estimatedNutrition.calories.toFixed(1)} kcal</li>
-              <li>Protein: {estimatedNutrition.protein.toFixed(1)} g</li>
-              <li>Carbohydrates: {estimatedNutrition.carbs.toFixed(1)} g</li>
-              <li>Fat: {estimatedNutrition.fat.toFixed(1)} g</li>
-            </ul>
+        {loading && (
+          <p className="status-message">Searching the food database...</p>
+        )}
+
+        {!loading && hasSearched && foods.length > 0 && (
+          <div className="food-results">
+            <h3>Search results</h3>
+
+            {foods.map((food) => (
+              <button
+                className="food-result"
+                key={food.id}
+                type="button"
+                onClick={() => handleSelectFood(food.id)}
+                disabled={detailsLoading}
+              >
+                <FoodImage
+                  src={food.image}
+                  alt={food.name}
+                  className="food-thumbnail"
+                />
+
+                <span className="food-result-info">
+                  <strong>{food.name}</strong>
+                  {food.brand && (
+                    <span className="food-brand">{food.brand}</span>
+                  )}
+                  <small>
+                    {food.type === "Brand" ? "Branded food" : "Generic food"}
+                  </small>
+                </span>
+
+                <span className="result-arrow" aria-hidden="true">
+                  →
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {detailsLoading && (
+          <p className="status-message">
+            Loading serving sizes and nutrition...
+          </p>
+        )}
+      </section>
+
+      {selectedFood && (
+        <section className="panel selected-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">SELECTED FOOD</p>
+              <h2>{selectedFood.name}</h2>
+              {selectedFood.brand && (
+                <p className="food-brand">{selectedFood.brand}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="selected-food-layout">
+            <FoodImage
+              src={selectedFood.image}
+              alt={selectedFood.name}
+              className="selected-food-image"
+            />
+
+            <div className="serving-controls">
+              <label htmlFor="serving-select">Serving size</label>
+
+              <select
+                id="serving-select"
+                value={selectedServingIndex}
+                onChange={(event) =>
+                  setSelectedServingIndex(Number(event.target.value))
+                }
+                disabled={servingOptions.length === 0}
+              >
+                {servingOptions.map((serving, index) => (
+                  <option key={serving.id || index} value={index}>
+                    {serving.description}
+                  </option>
+                ))}
+              </select>
+
+              <label htmlFor="quantity">Number of servings</label>
+
+              <input
+                id="quantity"
+                type="number"
+                min="0.25"
+                max="100"
+                step="0.25"
+                value={servings}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+
+                  if (Number.isFinite(value) && value > 0 && value <= 100) {
+                    setServings(value);
+                  }
+                }}
+              />
+
+              <label htmlFor="meal-select">Add to meal</label>
+
+              <select
+                id="meal-select"
+                value={selectedMeal}
+                onChange={(event) => setSelectedMeal(event.target.value)}
+              >
+                {MEALS.map((meal) => (
+                  <option key={meal} value={meal}>
+                    {meal}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {selectedServing && (
+            <>
+              <div className="nutrition-grid">
+                <NutritionCard
+                  label="Calories"
+                  value={formatNumber(estimatedNutrition.calories, 0)}
+                  unit="kcal"
+                />
+                <NutritionCard
+                  label="Protein"
+                  value={formatNumber(estimatedNutrition.protein)}
+                  unit="g"
+                />
+                <NutritionCard
+                  label="Carbs"
+                  value={formatNumber(estimatedNutrition.carbs)}
+                  unit="g"
+                />
+                <NutritionCard
+                  label="Fat"
+                  value={formatNumber(estimatedNutrition.fat)}
+                  unit="g"
+                />
+              </div>
+
+              <button
+                type="button"
+                className="primary-button add-button"
+                onClick={addToDiary}
+              >
+                + Add to {selectedMeal}
+              </button>
+            </>
           )}
 
-          {/* MEAL SELECTION */}
-          <h3>Add to Food Diary</h3>
-
-          <label htmlFor="meal">Choose a meal:</label>
-
-          <select
-            id="meal"
-            value={selectedMeal}
-            onChange={(event) => setSelectedMeal(event.target.value)}
-          >
-            <option value="Breakfast">Breakfast</option>
-            <option value="Lunch">Lunch</option>
-            <option value="Dinner">Dinner</option>
-            <option value="Snacks">Snacks</option>
-          </select>
-
-          <button type="button" onClick={addToDiary}>
-            Add to Diary
-          </button>
+          {servingOptions.length === 0 && (
+            <p className="status-message">
+              No serving data was returned for this food.
+            </p>
+          )}
         </section>
       )}
 
-      {/* FOOD DIARY */}
-      <section>
-        <h2>Food Diary</h2>
+      <section className="panel diary-panel">
+        <div className="section-heading diary-heading">
+          <div>
+            <p className="eyebrow">YOUR FOOD LOG</p>
 
-        {["Breakfast", "Lunch", "Dinner", "Snacks"].map((meal) => {
-          const mealEntries = diary.filter((entry) => entry.meal === meal);
+            <h2>
+              {selectedDate === getLocalDateString()
+                ? "Today's diary"
+                : "Diary history"}
+            </h2>
 
-          return (
-            <div key={meal}>
-              <h3>{meal}</h3>
+            <p className="subtitle">Your entries are saved in this browser.</p>
 
-              {mealEntries.length === 0 ? (
-                <p>No foods added yet.</p>
-              ) : (
-                <ul>
-                  {mealEntries.map((entry) => (
-                    <li key={entry.id}>
-                      <strong>{entry.name}</strong>
-                      {" — "}
-                      {entry.servings} serving(s)
-                      {entry.servingDescription
-                        ? ` (${entry.servingDescription})`
-                        : ""}
-                      {" | "}
-                      Calories: {entry.calories.toFixed(1)} kcal
-                      {" | "}
-                      Protein: {entry.protein.toFixed(1)} g{" | "}
-                      Carbs: {entry.carbs.toFixed(1)} g{" | "}
-                      Fat: {entry.fat.toFixed(1)} g{" "}
-                      <button
-                        type="button"
-                        onClick={() => removeFromDiary(entry.id)}
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <label htmlFor="diary-date">Choose a date</label>
+            <input
+              id="diary-date"
+              type="date"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+            />
+          </div>
+
+          {selectedEntries.length > 0 && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={clearDiary}
+            >
+              Clear diary
+            </button>
+          )}
+        </div>
+
+        <div className="daily-summary">
+          <div className="daily-calories">
+            <span>Total calories</span>
+            <strong>{formatNumber(dailyTotals.calories, 0)}</strong>
+            <small>kcal</small>
+          </div>
+
+          <div className="summary-macros">
+            <SummaryMacro label="Protein" value={dailyTotals.protein} />
+            <SummaryMacro label="Carbs" value={dailyTotals.carbs} />
+            <SummaryMacro label="Fat" value={dailyTotals.fat} />
+          </div>
+        </div>
+
+        <section className="daily-goals">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">YOUR DAILY TARGETS</p>
+              <h3>Nutrition goals</h3>
+              <p className="subtitle">
+                Update your targets and track your progress.
+              </p>
             </div>
-          );
-        })}
+          </div>
+
+          <div className="goals-grid">
+            {goalItems.map((item) => {
+              const progress =
+                item.goal > 0 ? (item.current / item.goal) * 100 : 0;
+
+              const remaining = Math.max(0, item.goal - item.current);
+
+              return (
+                <article className="goal-card" key={item.key}>
+                  <div className="goal-card-heading">
+                    <label htmlFor={`goal-${item.key}`}>{item.label}</label>
+
+                    <strong>
+                      {Math.round(item.current).toLocaleString()}
+                      {" / "}
+                      {item.goal.toLocaleString()} {item.unit}
+                    </strong>
+                  </div>
+
+                  <div
+                    className="goal-progress-track"
+                    role="progressbar"
+                    aria-label={`${item.label} progress`}
+                    aria-valuemin={0}
+                    aria-valuemax={item.goal}
+                    aria-valuenow={Math.min(item.current, item.goal)}
+                  >
+                    <div
+                      className="goal-progress-fill"
+                      style={{
+                        width: `${Math.min(100, progress)}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="goal-card-footer">
+                    <span>{Math.round(progress)}% of goal</span>
+                    <span>
+                      {remaining > 0
+                        ? `${remaining.toLocaleString(undefined, {
+                            maximumFractionDigits: 1,
+                          })} ${item.unit} left`
+                        : "Goal reached!"}
+                    </span>
+                  </div>
+
+                  <label
+                    className="goal-input-label"
+                    htmlFor={`goal-${item.key}`}
+                  >
+                    Daily target
+                  </label>
+
+                  <input
+                    id={`goal-${item.key}`}
+                    type="number"
+                    min="1"
+                    step="any"
+                    value={goals[item.key] || ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setGoals((current) => ({
+                        ...current,
+                        [item.key]: value === "" ? 0 : Number(value),
+                      }));
+                    }}
+                    onBlur={() => {
+                      setGoals((current) => ({
+                        ...current,
+                        [item.key]:
+                          Number(current[item.key]) > 0
+                            ? Number(current[item.key])
+                            : DEFAULT_GOALS[item.key],
+                      }));
+                    }}
+                  />
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {selectedEntries.length === 0 ? (
+          <div className="empty-diary">
+            <span className="empty-icon">🥗</span>
+            <h3>Your diary is empty</h3>
+            <p>Search for a food above and add it to a meal.</p>
+          </div>
+        ) : (
+          <div className="meal-list">
+            {MEALS.map((meal) => {
+              const entries = selectedEntries.filter(
+                (entry) => entry.meal === meal,
+              );
+
+              return (
+                <section className="meal-section" key={meal}>
+                  <div className="meal-heading">
+                    <h3>{meal}</h3>
+                    <span>
+                      {formatNumber(
+                        entries.reduce(
+                          (sum, entry) => sum + (Number(entry.calories) || 0),
+                          0,
+                        ),
+                        0,
+                      )}{" "}
+                      kcal
+                    </span>
+                  </div>
+
+                  {entries.length === 0 ? (
+                    <p className="empty-meal">No foods added yet.</p>
+                  ) : (
+                    entries.map((entry) => (
+                      <article className="diary-entry" key={entry.id}>
+                        <FoodImage
+                          src={entry.image}
+                          alt={entry.name}
+                          className="diary-thumbnail"
+                        />
+
+                        <div className="diary-entry-info">
+                          <strong>{entry.name}</strong>
+                          {entry.brand && <small>{entry.brand}</small>}
+                          <small>
+                            {formatNumber(entry.servings)} ×{" "}
+                            {entry.servingDescription || "serving"}
+                          </small>
+                          <span className="entry-macros">
+                            {formatNumber(entry.calories, 0)} kcal · P{" "}
+                            {formatNumber(entry.protein)}g · C{" "}
+                            {formatNumber(entry.carbs)}g · F{" "}
+                            {formatNumber(entry.fat)}g
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="remove-button"
+                          onClick={() => removeFromDiary(entry.id)}
+                          aria-label={`Remove ${entry.name}`}
+                          title="Remove food"
+                        >
+                          ×
+                        </button>
+                      </article>
+                    ))
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
       </section>
+
+      <footer className="app-footer">
+        <p>Nutrition values depend on the selected food and serving data.</p>
+      </footer>
     </main>
   );
 }
 
-export default App;
+function NutritionCard({ label, value, unit }) {
+  return (
+    <div className="nutrition-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{unit}</small>
+    </div>
+  );
+}
+
+function SummaryMacro({ label, value }) {
+  return (
+    <div className="summary-macro">
+      <span>{label}</span>
+      <strong>{formatNumber(value)} g</strong>
+    </div>
+  );
+}
