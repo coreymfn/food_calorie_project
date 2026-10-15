@@ -106,7 +106,14 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
     setError("");
     setIsFormOpen(false);
   }
+  function removeCustomFood(foodId) {
+    const updatedFoods = customFoods.filter(
+        (food) => food.id !== foodId
+    );
 
+    setCustomFoods(updatedFoods);
+    localStorage.setItem("customFoods", JSON.stringify(updatedFoods));
+    }
   function handleAddToDiary(food) {
     onAddToDiary(food, customMeal);
   }
@@ -118,7 +125,7 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
         onClick={() => setIsFormOpen((previous) => !previous)}
         aria-expanded={isFormOpen}
       >
-        {isFormOpen ? "− Hide Custom Food Form" : "+ Create a Custom Food"}
+        {isFormOpen ? "- Hide Custom Food Form" : "+ Create a Custom Food"}
       </button>
 
       {isFormOpen && (
@@ -220,13 +227,28 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
                   <p>Carbs: {food.carbs} g</p>
                   <p>Fat: {food.fat} g</p>
                 </div>
-
+                <div className="custom-food-actions">
                 <button
-                  type="button"
-                  onClick={() => handleAddToDiary(food)}
+                    type="button"
+                    onClick={() => handleAddToDiary(food)}
                 >
-                  + Add to {customMeal}
+                    + Add to {customMeal}
                 </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                    if (
+                        window.confirm(
+                        `Are you sure you want to remove ${food.name}?`
+                        )
+                    ) {
+                        removeCustomFood(food.id);
+                    }
+                    }}
+                >
+                    Remove
+                </button>
+                </div>
               </div>
             ))}
           </div>
