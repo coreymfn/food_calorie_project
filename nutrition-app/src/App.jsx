@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 
-import { searchFoods, getFoodDetails } from "./api/usda";
+import { searchFoods, getFoodDetails, SEARCH_PAGE_SIZE } from "./api/usda";
 import MaintenanceCaloriesForm from "./assets/form";
 import {
   getNutritionTotals,
@@ -194,6 +194,10 @@ function getServingOptions(food) {
 
 function App() {
   // Food search state
+  const [pageNumber, setPageNumber] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [sortBy, setSortBy] = useState("relevance");
+  const [foodTypeFilter, setFoodTypeFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [foods, setFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
@@ -224,6 +228,7 @@ function App() {
     if (!trimmedQuery) {
       setError("Enter a food name to search.");
       setFoods([]);
+      setHasMore(false);
       return;
     }
 
@@ -231,10 +236,14 @@ function App() {
     setError("");
     setFoods([]);
     setSelectedFood(null);
+    setPageNumber(1);
+    setHasMore(false);
 
     try {
-      const results = await searchFoods(trimmedQuery);
+      const results = await searchFoods(trimmedQuery, 1);
+
       setFoods(results);
+      setHasMore(results.length === SEARCH_PAGE_SIZE);
 
       if (results.length === 0) {
         setError("No foods found. Try another search.");
@@ -245,6 +254,73 @@ function App() {
       setLoading(false);
     }
   }
+
+  async function handleLoadMore() {
+    if (loading || !hasMore) return;
+
+    const nextPage = pageNumber + 1;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const results = await searchFoods(query.trim(), nextPage);
+
+      setFoods((currentFoods) => {
+        const existingIds = new Set(currentFoods.map((food) => food.fdcId));
+
+        const newFoods = results.filter((food) => !existingIds.has(food.fdcId));
+
+        return [...currentFoods, ...newFoods];
+      });
+
+      setPageNumber(nextPage);
+      setHasMore(results.length === SEARCH_PAGE_SIZE);
+
+      if (results.length === 0) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      setError(err.message || "Unable to load more foods.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const visibleFoods = foods
+    .filter((food) => {
+      if (foodTypeFilter === "branded") {
+        return food.dataType === "Branded";
+      }
+
+      if (foodTypeFilter === "generic") {
+        return food.dataType !== "Branded";
+      }
+
+      return true;
+    })
+    .slice()
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return (a.description ?? "").localeCompare(b.description ?? "");
+      }
+
+      if (sortBy === "brand") {
+        const brandA = a.brandName || a.brandOwner || "";
+        const brandB = b.brandName || b.brandOwner || "";
+
+        return brandA.localeCompare(brandB);
+      }
+
+      if (sortBy === "category") {
+        return (a.brandedFoodCategory ?? "").localeCompare(
+          b.brandedFoodCategory ?? "",
+        );
+      }
+
+      // Relevance: preserve the order returned by USDA.
+      return 0;
+    });
 
   async function handleSelectFood(fdcId) {
     setDetailsLoading(true);
@@ -395,19 +471,86 @@ function App() {
           <div className="food-results">
             <h3>Search Results</h3>
 
-            {foods.map((food) => (
-              <button
-                className="food-result"
-                key={food.fdcId}
-                type="button"
-                onClick={() => handleSelectFood(food.fdcId)}
-                disabled={detailsLoading}
-              >
-                <span>{food.description}</span>
+            <div className="food-results-toolbar">
+              <div>
+                <label htmlFor="food-sort">Sort by</label>
+                <select
+                  id="food-sort"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                >
+                  <option value="relevance">Relevance</option>
+                  <option value="name">Food name (A–Z)</option>
+                  <option value="brand">Brand (A–Z)</option>
+                  <option value="category">Category (A–Z)</option>
+                </select>
+              </div>
 
-                {food.brandOwner && <small>{food.brandOwner}</small>}
+              <div>
+                <label htmlFor="food-type-filter">Food type</label>
+                <select
+                  id="food-type-filter"
+                  value={foodTypeFilter}
+                  onChange={(event) => setFoodTypeFilter(event.target.value)}
+                >
+                  <option value="all">All foods</option>
+                  <option value="branded">Branded foods</option>
+                  <option value="generic">Generic / other foods</option>
+                </select>
+              </div>
+            </div>
+
+            <p className="food-results-count" aria-live="polite">
+              Showing {visibleFoods.length} of {foods.length} loaded foods
+            </p>
+
+            <div className="food-results-list">
+              {visibleFoods.length === 0 ? (
+                <p>No foods match the selected filter.</p>
+              ) : (
+                visibleFoods.map((food) => (
+                  <button
+                    className="food-result"
+                    key={food.fdcId}
+                    type="button"
+                    onClick={() => handleSelectFood(food.fdcId)}
+                    disabled={detailsLoading}
+                  >
+                    <span className="food-result-title">
+                      {food.description || "Unnamed food"}
+                    </span>
+
+                    <span className="food-result-meta">
+                      <strong>Brand:</strong>{" "}
+                      {food.brandName || food.brandOwner || "No brand listed"}
+                    </span>
+
+                    <span className="food-result-meta">
+                      <strong>Branded Food Category:</strong>{" "}
+                      {food.brandedFoodCategory || "Not provided"}
+                    </span>
+
+                    <span className="food-result-meta">
+                      <strong>Food type:</strong>{" "}
+                      {food.dataType || "Not specified"}
+                    </span>
+
+                    <span className="food-result-select">Select food →</span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {hasMore && (
+              <button
+                className="load-more-button"
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loading || detailsLoading}
+              >
+                {loading ? "Loading..." : "Load More Foods"}
               </button>
-            ))}
+            )}
           </div>
         )}
 

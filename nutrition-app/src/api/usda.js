@@ -2,7 +2,9 @@ const API_KEY = import.meta.env.VITE_USDA_API_KEY;
 
 const BASE_URL = "https://api.nal.usda.gov/fdc/v1";
 
-export async function searchFoods(query) {
+export const SEARCH_PAGE_SIZE = 50;
+
+export async function searchFoods(query, pageNumber = 1) {
   if (!API_KEY) {
     throw new Error("Missing USDA API key. Check your .env file.");
   }
@@ -16,8 +18,8 @@ export async function searchFoods(query) {
       },
       body: JSON.stringify({
         query,
-        pageSize: 10,
-        pageNumber: 1,
+        pageSize: SEARCH_PAGE_SIZE,
+        pageNumber,
       }),
     },
   );
