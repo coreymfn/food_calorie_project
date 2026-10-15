@@ -16,7 +16,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState("");
-
+  const [goalResult, setGoalResult] = useState(() => {
+    try {
+      const savedResult = localStorage.getItem("maintenanceGoalResult");
+      return savedResult ? JSON.parse(savedResult) : null;
+    } catch {
+      return null;
+    }
+  });
   // Food diary state
   const [diary, setDiary] = useState(() => {
     try {
@@ -331,8 +338,8 @@ function App() {
     <main>
       <h1>Nutrition App</h1>
         
-      <MaintenanceCaloriesForm />
-      <ProteinCalculator />
+    <MaintenanceCaloriesForm onResult={setGoalResult} />
+    <ProteinCalculator maintenanceResult={goalResult} />
       {/* FOOD SEARCH */}
       <form onSubmit={handleSearch}>
         <label htmlFor="food-search">Search for a food</label>

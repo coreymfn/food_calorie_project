@@ -1,25 +1,58 @@
 import { useState } from "react";
 import calculateGoal from "./calculateGoal";
 
-function MaintenanceCaloriesForm() {
-  const [goalForm, setGoalForm] = useState({
-    height: "",
-    weight: "",
-    gender: "",
-    activity: "",
-    age: "",
-    goalType: "lose",
-    pounds: "",
-    weeks: "",
+function MaintenanceCaloriesForm({ onResult }) {
+  const [goalForm, setGoalForm] = useState(() => {
+    const defaultForm = {
+      height: "",
+      weight: "",
+      gender: "",
+      activity: "",
+      age: "",
+      goalType: "lose",
+      pounds: "",
+      weeks: "",
+    };
+    try {
+      const savedForm = localStorage.getItem("maintenanceGoalForm");
+
+      return savedForm
+        ? { ...defaultForm, ...JSON.parse(savedForm) }
+        : defaultForm;
+    } catch {
+      return defaultForm;
+    }
   });
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => {
+    try {
+      const savedResult = localStorage.getItem("maintenanceGoalResult");
+      return savedResult ? JSON.parse(savedResult) : null;
+    } catch {
+      return null;
+    }
+  });
   function handleGoalChange(event) {
     const { name, value } = event.target;
-    setGoalForm((previous) => ({
-      ...previous,
+    const updatedForm = {
+      ...goalForm,
       [name]: value,
-    }));
+    };
+    // Calculate the weeks automatically.
+    if (name === "pounds" || name === "goalType") {
+      updatedForm.weeks =
+        updatedForm.goalType !== "maintain" &&
+        Number(updatedForm.pounds) > 0
+          ? String(Math.ceil(Number(updatedForm.pounds) / 1))
+          : "";
+    }
+    setGoalForm(updatedForm);
+    localStorage.setItem(
+      "maintenanceGoalForm",
+      JSON.stringify(updatedForm)
+    );
     setResult(null);
+    localStorage.removeItem("maintenanceGoalResult");
+    onResult?.(null);
   }
   function handleGoalSubmit(event) {
     event.preventDefault();
@@ -33,6 +66,12 @@ function MaintenanceCaloriesForm() {
       pounds,
       weeks,
     } = goalForm;
+    const calculatedWeeks =
+      goalType === "maintain"
+        ? 0
+        : Number(pounds) > 0
+          ? Math.ceil(Number(pounds) / 1)
+          : 0;
     const calculation = calculateGoal(
       Number(height),
       Number(weight),
@@ -40,10 +79,29 @@ function MaintenanceCaloriesForm() {
       activity,
       Number(age),
       pounds === "" ? 0 : Number(pounds),
-      weeks === "" ? 0 : Number(weeks),
+      calculatedWeeks,
       goalType
     );
-    setResult(calculation);
+    const sharedResult = {
+      ...calculation,
+      weight: Number(weight),
+    };
+    setResult(sharedResult);
+    localStorage.setItem(
+      "maintenanceGoalResult",
+      JSON.stringify(sharedResult)
+    );
+    // Save the automatically calculated weeks too.
+    const updatedForm = {
+      ...goalForm,
+      weeks: String(calculatedWeeks),
+    };
+    setGoalForm(updatedForm);
+    localStorage.setItem(
+      "maintenanceGoalForm",
+      JSON.stringify(updatedForm)
+    );
+    onResult?.(sharedResult);
   }
   return (
     <section>
@@ -173,19 +231,22 @@ function MaintenanceCaloriesForm() {
               />
             </div>
             <div>
-              <label htmlFor="weeks">Number of Weeks</label>
+              <label htmlFor="weeks">Estimated Number of Weeks</label>
               <input
                 id="weeks"
                 name="weeks"
                 type="number"
-                min="1"
-                max="104"
-                step="1"
-                placeholder="e.g. 12"
-                value={goalForm.weeks}
-                onChange={handleGoalChange}
-                required
+                value={
+                  Number(goalForm.pounds) > 0
+                    ? Math.ceil(Number(goalForm.pounds) / 1)
+                    : ""
+                }
+                readOnly
               />
+              <p>
+                This is a mathematical estimate, not a prediction
+                of how your body will change.
+              </p>
             </div>
           </>
         )}
@@ -262,4 +323,4 @@ function MaintenanceCaloriesForm() {
     </section>
   );
 }
-export default MaintenanceCaloriesForm
+export default MaintenanceCaloriesForm;
