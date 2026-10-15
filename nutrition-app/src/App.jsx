@@ -34,13 +34,22 @@ function getSavedDiary() {
       return [];
     }
 
-    // Give older entries without a date today's date.
+    // Keep existing entries and add dates to older entries.
     return parsedDiary.map((entry) => ({
       ...entry,
       date: entry.date || getLocalDateString(),
     }));
   } catch {
     return [];
+  }
+}
+
+function getSavedGoalResult() {
+  try {
+    const savedResult = localStorage.getItem("maintenanceGoalResult");
+    return savedResult ? JSON.parse(savedResult) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -60,11 +69,10 @@ function getNutrition(food) {
     return emptyNutrition;
   }
 
-  // Branded foods may provide nutrition per labeled serving.
-  // Those values should not be treated as values per 100 grams.
-  if (food.dataType === "Branded" && food.labelNutrients) {
-    const labels = food.labelNutrients;
+  const labels = food.labelNutrients;
 
+  // Branded label nutrients are already per labeled serving.
+  if (food.dataType === "Branded" && labels && Object.keys(labels).length > 0) {
     return {
       calories: Number(labels.calories?.value ?? 0),
       protein: Number(labels.protein?.value ?? 0),
@@ -77,41 +85,52 @@ function getNutrition(food) {
     };
   }
 
-  // Most other USDA nutrient values are reported per 100 grams.
+  // Other USDA nutrient values are generally per 100 grams.
   const nutrients = food.foodNutrients ?? [];
   const result = { ...emptyNutrition };
 
   for (const nutrient of nutrients) {
-    const name = (nutrient.nutrientName ?? nutrient.name ?? "").toLowerCase();
+    const name = (
+      nutrient.nutrient?.name ??
+      nutrient.nutrientName ??
+      nutrient.name ??
+      ""
+    ).toLowerCase();
 
-    const amount = Number(nutrient.value ?? nutrient.amount ?? 0);
+    const amount = Number(nutrient.amount ?? nutrient.value ?? 0);
 
     if (!Number.isFinite(amount)) {
       continue;
     }
 
-    if (name === "energy") {
-      const unit = (nutrient.unitName ?? "").toLowerCase();
+    const unit = (
+      nutrient.nutrient?.unitName ??
+      nutrient.unitName ??
+      ""
+    ).toLowerCase();
 
+    if (name === "energy" || name.startsWith("energy (")) {
       if (unit === "kcal") {
         result.calories = amount;
       } else if (unit === "kj") {
-        // Convert kilojoules to kilocalories.
         result.calories = amount / 4.184;
       }
     } else if (name === "protein") {
       result.protein = amount;
-    } else if (name === "carbohydrate, by difference") {
+    } else if (name.startsWith("carbohydrate, by difference")) {
       result.carbs = amount;
-    } else if (name === "total lipid (fat)") {
+    } else if (name.startsWith("total lipid (fat)")) {
       result.fat = amount;
-    } else if (name === "fatty acids, total saturated") {
+    } else if (name.startsWith("fatty acids, total saturated")) {
       result.saturatedFat = amount;
-    } else if (name === "fiber, total dietary") {
+    } else if (name.startsWith("fiber, total dietary")) {
       result.fiber = amount;
-    } else if (name === "sugars, total including nlea") {
+    } else if (
+      name.startsWith("sugars, total including nlea") ||
+      name.startsWith("sugars, total")
+    ) {
       result.sugar = amount;
-    } else if (name === "sodium, na") {
+    } else if (name === "sodium" || name === "sodium, na") {
       result.sodium = amount;
     }
   }
@@ -124,9 +143,12 @@ function getServingOptions(food) {
     return [{ label: "100 g", factor: 1 }];
   }
 
-  // Labeled nutrition for branded products is already
-  // measured per labeled serving.
-  if (food.dataType === "Branded" && food.labelNutrients) {
+  // Branded label nutrition is per labeled serving.
+  if (
+    food.dataType === "Branded" &&
+    food.labelNutrients &&
+    Object.keys(food.labelNutrients).length > 0
+  ) {
     const label =
       food.householdServingFullText ||
       (food.servingSize
@@ -136,8 +158,7 @@ function getServingOptions(food) {
     return [{ label, factor: 1 }];
   }
 
-  // For branded foods without label nutrients, use the
-  // listed serving size to scale per-100-gram nutrition.
+  // Scale per-100-gram nutrition for a branded gram serving.
   if (
     food.dataType === "Branded" &&
     Number(food.servingSize) > 0 &&
@@ -151,37 +172,46 @@ function getServingOptions(food) {
     ];
   }
 
-  // Generic foods can have several serving options.
+  // Generic foods may have several USDA portion options.
   const portions = (food.foodPortions ?? [])
     .filter((portion) => Number(portion.gramWeight) > 0)
-    .map((portion, index) => ({
-      label:
+    .map((portion, index) => {
+      const amount = Number(portion.amount) || 1;
+      const description =
         portion.portionDescription ||
         portion.modifier ||
-        `Serving ${index + 1}`,
-      factor: Number(portion.gramWeight) / 100,
-    }));
+        portion.measureUnit?.name ||
+        `Serving ${index + 1}`;
+
+      return {
+        label: `${amount} ${description} (${portion.gramWeight} g)`,
+        factor: Number(portion.gramWeight) / 100,
+      };
+    });
 
   return [{ label: "100 g", factor: 1 }, ...portions];
 }
 
 function App() {
+  // Food search state
   const [query, setQuery] = useState("");
   const [foods, setFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
-
   const [servings, setServings] = useState(1);
   const [selectedServingIndex, setSelectedServingIndex] = useState(0);
-
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Maintenance-calorie goal state
+  const [goalResult, setGoalResult] = useState(getSavedGoalResult);
+
+  // Food diary state
   const [diary, setDiary] = useState(getSavedDiary);
   const [selectedMeal, setSelectedMeal] = useState("Breakfast");
   const [selectedDate, setSelectedDate] = useState(getLocalDateString);
 
-  // Show entries and totals for the selected date only.
+  // Only show entries recorded for the selected date.
   const selectedEntries = diary.filter((entry) => entry.date === selectedDate);
 
   const dailyTotals = getNutritionTotals(selectedEntries);
@@ -250,6 +280,20 @@ function App() {
         )
       : null;
 
+  function handleGoalResult(result) {
+    setGoalResult(result);
+
+    try {
+      if (result == null) {
+        localStorage.removeItem("maintenanceGoalResult");
+      } else {
+        localStorage.setItem("maintenanceGoalResult", JSON.stringify(result));
+      }
+    } catch {
+      setError("Your goal was calculated, but could not be saved.");
+    }
+  }
+
   function saveDiary(updatedDiary) {
     setDiary(updatedDiary);
 
@@ -261,32 +305,54 @@ function App() {
   }
 
   function addToDiary() {
-    if (!selectedFood || !estimatedNutrition) {
+    if (!selectedFood) {
+      setError("Please select a food first.");
       return;
     }
 
-    const entry = {
-      id: crypto.randomUUID(),
+    const servingCount = Number(servings);
+
+    if (!Number.isFinite(servingCount) || servingCount <= 0) {
+      setError("Please enter a valid serving amount.");
+      return;
+    }
+
+    // Generate the ID inside the click handler.
+    const entryId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
+
+    const nutrition = getNutrition(selectedFood);
+
+    const newEntry = {
+      id: entryId,
       foodId: selectedFood.fdcId,
       name: selectedFood.description,
       brand: selectedFood.brandOwner ?? "",
-      date: selectedDate,
       meal: selectedMeal,
-      servings,
-      servingDescription: selectedServing.label,
-      ...estimatedNutrition,
+      date: selectedDate,
+      servings: servingCount,
+      calories: (nutrition.calories ?? 0) * servingCount,
+      protein: (nutrition.protein ?? 0) * servingCount,
+      carbs: (nutrition.carbs ?? 0) * servingCount,
+      fat: (nutrition.fat ?? 0) * servingCount,
+      saturatedFat: (nutrition.saturatedFat ?? 0) * servingCount,
+      fiber: (nutrition.fiber ?? 0) * servingCount,
+      sugar: (nutrition.sugar ?? 0) * servingCount,
+      sodium: (nutrition.sodium ?? 0) * servingCount,
     };
 
-    saveDiary([...diary, entry]);
+    setDiary((previousDiary) => [...previousDiary, newEntry]);
 
     setSelectedFood(null);
-    setServings(1);
+    setServings("1");
     setSelectedServingIndex(0);
+    setError("");
   }
 
   function removeFromDiary(id) {
     const updatedDiary = diary.filter((entry) => entry.id !== id);
-
     saveDiary(updatedDiary);
   }
 
@@ -297,6 +363,7 @@ function App() {
         <p>Track your food and daily nutrition.</p>
       </header>
 
+      {/* FOOD SEARCH */}
       <section className="panel">
         <h2>Search for Food</h2>
 
@@ -334,6 +401,7 @@ function App() {
                 key={food.fdcId}
                 type="button"
                 onClick={() => handleSelectFood(food.fdcId)}
+                disabled={detailsLoading}
               >
                 <span>{food.description}</span>
 
@@ -345,6 +413,7 @@ function App() {
 
         {detailsLoading && <p>Loading food details...</p>}
 
+        {/* SELECTED FOOD */}
         {selectedFood && estimatedNutrition && (
           <div className="selected-food-layout">
             <h3>{selectedFood.description}</h3>
@@ -356,9 +425,9 @@ function App() {
             <select
               id="serving-size"
               value={selectedServingIndex}
-              onChange={(event) =>
-                setSelectedServingIndex(Number(event.target.value))
-              }
+              onChange={(event) => {
+                setSelectedServingIndex(Number(event.target.value));
+              }}
             >
               {servingOptions.map((option, index) => (
                 <option key={`${option.label}-${index}`} value={index}>
@@ -372,13 +441,12 @@ function App() {
             <input
               id="serving-count"
               type="number"
-              min="0.25"
-              step="0.25"
+              min="0.1"
+              step="0.1"
               value={servings}
               onChange={(event) => {
                 const value = Number(event.target.value);
-
-                setServings(Number.isFinite(value) && value > 0 ? value : 0.25);
+                setServings(Number.isFinite(value) && value >= 0 ? value : 0);
               }}
             />
 
@@ -415,6 +483,7 @@ function App() {
         )}
       </section>
 
+      {/* DAILY TOTALS */}
       <section className="panel">
         <h2>Daily Nutrition</h2>
 
@@ -443,9 +512,9 @@ function App() {
         </div>
       </section>
 
+      {/* FOOD DIARY */}
       <section className="panel">
         <h2>Food Diary</h2>
-
         <p>Entries for {selectedDate}</p>
 
         {selectedEntries.length === 0 ? (
@@ -472,7 +541,8 @@ function App() {
                       {entry.brand && <p>{entry.brand}</p>}
 
                       <p>
-                        {entry.servings} × {entry.servingDescription}
+                        {entry.servings} ×{" "}
+                        {entry.servingDescription || "serving"}
                       </p>
 
                       <p>
@@ -513,12 +583,14 @@ function App() {
         )}
       </section>
 
+      {/* MAINTENANCE CALORIES */}
       <section className="panel">
-        <MaintenanceCaloriesForm />
+        <MaintenanceCaloriesForm onResult={handleGoalResult} />
       </section>
 
+      {/* PROTEIN CALCULATOR */}
       <section className="panel">
-        <ProteinCalculator />
+        <ProteinCalculator maintenanceResult={goalResult} />
       </section>
     </main>
   );
