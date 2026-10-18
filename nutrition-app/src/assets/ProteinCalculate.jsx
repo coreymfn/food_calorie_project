@@ -1,4 +1,3 @@
-
 function ProteinCalculator({ maintenanceResult }) {
   if (!maintenanceResult) {
     return (

@@ -64,7 +64,6 @@ function MaintenanceCaloriesForm({ onResult }) {
       age,
       goalType,
       pounds,
-      weeks,
     } = goalForm;
     const calculatedWeeks =
       goalType === "maintain"
