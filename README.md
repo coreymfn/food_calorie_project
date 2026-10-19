@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img width="30%" src="./food_calorie_project/nutrition-app/src/assets/Icons/Fitty.png" alt="Fitty!">
+  <img width="30%" src="/food_calorie_project/nutrition-app/src/assets/Icons/Fitty.png" alt="Fitty!">
 
   # My Fitty
 
