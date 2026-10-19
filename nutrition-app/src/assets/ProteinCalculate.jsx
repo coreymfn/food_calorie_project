@@ -1,9 +1,6 @@
 <<<<<<< HEAD
 
 function ProteinCalculator({ maintenanceResult, onResult }) {
-=======
-function ProteinCalculator({ maintenanceResult }) {
->>>>>>> c246be2cb6b9e2c8bd223cd421f02f91d527e062
   if (!maintenanceResult) {
     return (
       <section>
