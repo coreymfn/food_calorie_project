@@ -48,7 +48,7 @@ function ProteinCalculator({ maintenanceResult, onResult }) {
   const target = Math.round((minimum + maximum) / 2);
 
   return (
-    <section>
+    <section className="protein-sheet">
       <h2>Daily Protein Calculator</h2>
       <p>
         Your protein estimate is connected to the information

@@ -179,7 +179,7 @@ function handleEditGoal() {
             <option value="Female">Female</option>
           </select>
         </div>
-        <div>
+        <div className="activity"> 
           <label htmlFor="activity">Activity Level</label>
           <select
             id="activity"
@@ -259,7 +259,7 @@ function handleEditGoal() {
             </div>
           </>
         )}
-        <button type="submit">Calculate Calories</button>
+        <button className="calc-cal" type="submit">Calculate Calories</button>
       </form>
   
 ) : (

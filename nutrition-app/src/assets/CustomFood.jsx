@@ -188,7 +188,7 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
               </div>
             ))}
 
-            <button type="submit">Save Custom Food</button>
+            <button className="save-cum" type="submit">Save Custom Food</button>
           </form>
         </div>
       )}
@@ -231,12 +231,14 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
                 <div className="custom-food-actions">
                 <button
                     type="button"
+                    className="cum-add"
                     onClick={() => handleAddToDiary(food)}
                 >
                     + Add to {customMeal}
                 </button>
                 <button
                     type="button"
+                    className="remove-cum"
                     onClick={() => {
                     if (
                         window.confirm(

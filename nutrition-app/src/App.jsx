@@ -577,6 +577,7 @@ const matchingFoods = query.trim()
         </div>
     </div>
 
+
       <button
         type="button"
         className="goal-form-block"
@@ -597,7 +598,10 @@ const matchingFoods = query.trim()
           aria-modal="true"
           aria-label="Set your weight goal"
         >
-          <button
+
+          <div className="goal-modal-content">
+
+            <button
             type="button"
             className="goal-modal-close"
             onClick={() => setShowGoalForm(false)}
@@ -605,7 +609,6 @@ const matchingFoods = query.trim()
             ✕
           </button>
 
-          <div className="goal-modal-content">
             <MaintenanceCaloriesForm
               onResult={handleGoalResult}
             />
@@ -621,7 +624,7 @@ const matchingFoods = query.trim()
   onClick={() => setShowFoodSearch((previous) => !previous)}
   aria-expanded={showFoodSearch}
 >
-  {showFoodSearch ? "Close Food Search" : "+ Add Food"}
+  {showFoodSearch ? "Close" : "+ Add Food"}
 </button>
 
 {/* FOOD SEARCH */}
@@ -754,13 +757,13 @@ const matchingFoods = query.trim()
         {/* SELECTED FOOD */}
         {selectedFood && estimatedNutrition && (
           <div className="selected-food-layout">
-
+            <div className="scroll-selected">
           <button
           type="button"
           onClick={() => setSelectedFood(null)}
           className="back-to-search-button"
         >
-          ← Back to Search Results
+          x
           </button>
 
             <h3>{selectedFood.description}</h3>
@@ -823,9 +826,10 @@ const matchingFoods = query.trim()
               ))}
             </ul>
 
-            <button type="button" onClick={addToDiary}>
+            <button className='add-diary' type="button" onClick={addToDiary}>
               Add to Diary
             </button>
+            </div>
           </div>
         )}
       </section>
@@ -867,12 +871,19 @@ const matchingFoods = query.trim()
             )
             .map((nutrient) => (
               <div className="goal-card" key={nutrient.key}>
-                <h3>{nutrient.label}</h3>
+                <h3>{nutrient.key === "carbs" ? 'Carbs' : nutrient.label}</h3>
 
                 <p>
                   {Number(dailyTotals[nutrient.key] ?? 0).toFixed(1)}{" "}
                   {nutrient.unit}
                 </p>
+
+                {nutrient.key === "protein" && (
+                   <p className="protein-goal-number">
+                    {proteinGoal !== null ? `${proteinGoal} g` : "Not set"}
+                  </p>
+                )}
+
               </div>
             ))}
           </div>
@@ -973,10 +984,6 @@ const matchingFoods = query.trim()
   </section>
 )}
 
- <p className="protein-goal-number">
-
-    {proteinGoal !== null ? `${proteinGoal} g` : "Not set"}
-  </p>
 
 
 <section className="protein-goal-card">
