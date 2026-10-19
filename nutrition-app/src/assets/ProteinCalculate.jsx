@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 function ProteinCalculator({ maintenanceResult, onResult }) {
   if (!maintenanceResult) {
     return (
