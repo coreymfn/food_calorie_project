@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect} from "react";
 import "./App.css";
 import CustomFood from "./assets/CustomFood";
 import { searchFoods, getFoodDetails, SEARCH_PAGE_SIZE } from "./api/usda";
 import MaintenanceCaloriesForm from "./assets/form";
 import {
   getNutritionTotals,
+  getCalorieStatus,
   nutrientsToTrack,
 } from "./assets/nutritionTracker";
 import ProteinCalculator from "./assets/ProteinCalculate";
+
+import chip100 from "./assets/Character/Chip100.png";
+import chipTooFull from "./assets/Character/ChipTooFull.png";
+import chip50 from "./assets/Character/Chip50.png";
+import chipNormal from "./assets/Character/ChipNormal.png";
 
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -147,7 +153,7 @@ function getServingOptions(food) {
         : "1 serving");
 
     return [{ label, factor: 1 }];
-  }
+      }
 
   // Scale per-100-gram nutrition for a branded gram serving.
   if (
@@ -192,6 +198,7 @@ function createEntryId() {
 
 function App() {
   // Food search state
+  const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [sortBy, setSortBy] = useState("relevance");
@@ -207,7 +214,32 @@ function App() {
 
   // Maintenance-calorie goal state
   const [goalResult, setGoalResult] = useState(getSavedGoalResult);
+  const [showGoalForm, setShowGoalForm] = useState(false);
   const [showCustomFood, setShowCustomFood] = useState(false);
+
+  // Protein Goal //
+  const [proteinGoal, setProteinGoal] = useState(() => {
+  try {
+    const saved = localStorage.getItem("proteinGoal");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+});
+
+const [showProteinForm, setShowProteinForm] = useState(false);
+
+function handleProteinGoal(result) {
+  const goal = Number(result);
+
+  if (!Number.isFinite(goal) || goal <= 0) {
+    return;
+  }
+
+  setProteinGoal(goal);
+  localStorage.setItem("proteinGoal", JSON.stringify(goal));
+  setShowProteinForm(false);
+}
 
   // Food diary state
   const [diary, setDiary] = useState(getSavedDiary);
@@ -218,8 +250,11 @@ function App() {
 
   const dailyTotals = getNutritionTotals(selectedEntries);
 
+  const [showFoodDiary, setShowFoodDiary] = useState(false);
+
+
   async function handleSearch(event) {
-    event.preventDefault();
+    event?.preventDefault();
 
     const trimmedQuery = query.trim();
 
@@ -450,19 +485,154 @@ function App() {
     saveDiary(updatedDiary);
   }
 
+  const calorieStatus = getCalorieStatus(
+  dailyTotals.calories ?? 0,
+  goalResult?.goalCalories
+);
+
+
+
+useEffect(() => {
+  const searchTerm = query.trim();
+
+  // Don't search if the input is empty
+  if (!searchTerm) {
+    setFoods([]);
+    setHasMore(false);
+    setError("");
+    return;
+  }
+
+  // Wait 400ms after typing before searching
+  const timeoutId = setTimeout(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const results = await searchFoods(searchTerm, 1);
+
+      setFoods(results.foods ?? results.results ?? results);
+      setPageNumber(1);
+      setHasMore(
+        (results.foods ?? results.results ?? results).length >= SEARCH_PAGE_SIZE
+      );
+    } catch (error) {
+      setError("Unable to search for foods. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, 400);
+
+  
+
+  // Cancel the pending search if the user types again
+  return () => clearTimeout(timeoutId);
+}, [query]);
+
+
+
+
+
+const matchingFoods = query.trim()
+  ? foods.filter((food) =>
+      (food.description ?? "")
+        .toLowerCase()
+        .startsWith(query.trim().toLowerCase())
+    )
+  : [];
+
+
+
   return (
     <main className="app">
-      <header className="app-header">
-        <h1>Nutrition Diary</h1>
-        <p>Track your food and daily nutrition.</p>
-      </header>
+      <div className={`goal-card calorie-card ${calorieStatus}`}>
+        
+        <div className="goal-display">
+          <h3>Daily Goal</h3>
 
-      {/* FOOD SEARCH */}
-      <section className="panel">
-        <h2>Search for Food</h2>
+          <p className="goal-number">
+            {goalResult?.goalCalories != null
+              ? `${goalResult.goalCalories.toLocaleString()} kcal`
+              : "Set your weight goal"}
+          </p>
 
+           <p className="active-num">
+          ~Current~ {Number(dailyTotals.calories ?? 0).toFixed(1)} Kcal
+          </p>
+
+         </div>
+
+
+        
+        <div className="calorie-character">
+          {calorieStatus === "Goal reached" ? (
+            <img src={chip100} alt="Goal Reached" />
+          ) : calorieStatus === "Too much" ? (
+            <img src={chipTooFull} alt="Over Calorie Goal" />
+          ) : calorieStatus === "Halfway" ? (
+            <img src={chip50} alt="Halfway to Goal" />
+          ) : calorieStatus === "Getting started" ? (
+            <img src={chipNormal} alt="Getting Started" />
+        ) : null}
+        </div>
+    </div>
+
+      <button
+        type="button"
+        className="goal-form-block"
+        onClick={() => setShowGoalForm(true)}
+      >
+        <p>Set Calorie Goal</p>
+      </button>
+
+    
+    
+    {/* MAINTENANCE CALORIES POPUP */}
+    {showGoalForm && (
+      <div className="goal-modal-backdrop">
+        <div
+          className="goal-modal"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Set your weight goal"
+        >
+          <button
+            type="button"
+            className="goal-modal-close"
+            onClick={() => setShowGoalForm(false)}
+          >
+            ✕
+          </button>
+
+          <div className="goal-modal-content">
+            <MaintenanceCaloriesForm
+              onResult={handleGoalResult}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* FOOD SEARCH TOGGLE */}
+<button
+  type="button"
+  className="food-search-toggle"
+  onClick={() => setShowFoodSearch((previous) => !previous)}
+  aria-expanded={showFoodSearch}
+>
+  {showFoodSearch ? "Close Food Search" : "+ Add Food"}
+</button>
+
+{/* FOOD SEARCH */}
+{showFoodSearch && (
+  <section className="searchbox">
+          {/* FOOD SEARCH */}
+      <section className="searchbar">
+        
+      {!selectedFood && (
         <form onSubmit={handleSearch}>
-          <label htmlFor="food-search">Food name</label>
+          <label htmlFor="food-search"></label>
 
           <div className="search-row">
             <input
@@ -478,17 +648,23 @@ function App() {
             </button>
           </div>
         </form>
+      )}
 
         {error && (
           <p className="error-message" role="alert">
             {error}
           </p>
         )}
+      
 
-        {foods.length > 0 && (
+        {query.trim() !== "" && foods.length > 0 && !selectedFood && (
           <div className="food-results">
             <h3>Search Results</h3>
 
+            <p className="food-results-count" aria-live="polite">
+              Showing {visibleFoods.length} of {foods.length} loaded foods
+            </p>
+            
             <div className="food-results-toolbar">
               <div>
                 <label htmlFor="food-sort">Sort by</label>
@@ -517,10 +693,9 @@ function App() {
                 </select>
               </div>
             </div>
+        
 
-            <p className="food-results-count" aria-live="polite">
-              Showing {visibleFoods.length} of {foods.length} loaded foods
-            </p>
+            
 
             <div className="food-results-list">
               {visibleFoods.length === 0 ? (
@@ -557,9 +732,8 @@ function App() {
                   </button>
                 ))
               )}
-            </div>
 
-            {hasMore && (
+              {hasMore && (
               <button
                 className="load-more-button"
                 type="button"
@@ -569,6 +743,9 @@ function App() {
                 {loading ? "Loading..." : "Load More Foods"}
               </button>
             )}
+            </div>
+
+            
           </div>
         )}
 
@@ -577,6 +754,15 @@ function App() {
         {/* SELECTED FOOD */}
         {selectedFood && estimatedNutrition && (
           <div className="selected-food-layout">
+
+          <button
+          type="button"
+          onClick={() => setSelectedFood(null)}
+          className="back-to-search-button"
+        >
+          ← Back to Search Results
+          </button>
+
             <h3>{selectedFood.description}</h3>
 
             {selectedFood.brandOwner && <p>Brand: {selectedFood.brandOwner}</p>}
@@ -645,36 +831,41 @@ function App() {
       </section>
 
       {/* CUSTOM FOODS */}
+      {!selectedFood && query.trim() === "" && (
       <button
         type="button"
+        className="custom-button"
         onClick={() => setShowCustomFood((previous) => !previous)}
       >
         {showCustomFood ? "Hide Custom Foods" : "Show Custom Foods"}
       </button>
+      )}
 
       {showCustomFood && (
+        <div className="custom-food-panel">
         <CustomFood
           selectedMeal={selectedMeal}
           onAddToDiary={addCustomFoodToDiary}
         />
+        </div>
       )}
 
-      {/* DAILY TOTALS */}
-      <section className="panel">
-        <h2>Daily Nutrition</h2>
+  </section>
+)}
+      
 
-        <label htmlFor="diary-date">Diary date</label>
 
-        <input
-          id="diary-date"
-          type="date"
-          value={selectedDate}
-          onChange={(event) => setSelectedDate(event.target.value)}
-        />
+{/* DAILY TOTALS */}
+      <section className="panel-stats">
 
         <div className="daily-summary">
           <div className="goals-grid">
-            {nutrientsToTrack.map((nutrient) => (
+            {nutrientsToTrack
+            .filter(
+              (nutrient) =>
+                !["calories", "saturatedFat"].includes(nutrient.key)
+            )
+            .map((nutrient) => (
               <div className="goal-card" key={nutrient.key}>
                 <h3>{nutrient.label}</h3>
 
@@ -688,86 +879,140 @@ function App() {
         </div>
       </section>
 
-      {/* FOOD DIARY */}
-      <section className="panel">
-        <h2>Food Diary</h2>
-        <p>Entries for {selectedDate}</p>
+<button
+  type="button"
+  className="dairy-button"
+  onClick={() => setShowFoodDiary(prev => !prev)}
+>
+  {showFoodDiary ? "Close Food Diary" : "Open Food Diary"}
+</button>
 
-        {selectedEntries.length === 0 ? (
-          <p>No foods recorded for this date yet.</p>
-        ) : (
-          MEALS.map((meal) => {
+ 
+      {showFoodDiary && (
+      <section className="food-diary">
+
+      <button
+        type="button"
+        className="diary-back-button"
+        onClick={() => setShowFoodDiary(false)}
+      >
+        ← Back
+      </button>
+
+        <div className="date-select">
+        <label htmlFor="diary-date"></label>
+
+          <input
+            id="diary-date"
+            type="date"
+            value={selectedDate}
+            onChange={(event) => setSelectedDate(event.target.value)}
+          />
+          </div>
+
+        <section className="panel">
+          <h2>Food Diary</h2>
+          <p>Entries for {selectedDate}</p>
+
+          {selectedEntries.length === 0 ? (
+            <p>No foods recorded for this date yet.</p>
+          ) : (
+           <div className="diary-grid">
+          {MEALS.map((meal) => {
             const mealEntries = selectedEntries.filter(
-              (entry) => entry.meal === meal,
+              (entry) => entry.meal === meal
             );
-
-            if (mealEntries.length === 0) return null;
 
             return (
-              <div className="diary-meal" key={meal}>
+              <div
+                className={`diary-meal diary-meal--${meal.toLowerCase()}`}
+                key={meal}
+              >
                 <h3>{meal}</h3>
 
-                {mealEntries.map((entry) => (
-                  <div className="diary-entry" key={entry.id}>
-                    <div>
-                      <strong>{entry.name}</strong>
+                {mealEntries.length === 0 ? (
+                  <p>No foods added yet.</p>
+                ) : (
+                  mealEntries.map((entry) => (
+                    <div className="diary-entry" key={entry.id}>
+                      <div className="diary-entry-info">
+                        <strong>{entry.name}</strong>
 
-                      {entry.brand && <p>{entry.brand}</p>}
+                        {entry.brand && <p>{entry.brand}</p>}
 
-                      <p>
-                        {entry.servings} ×{" "}
-                        {entry.servingDescription || "serving"}
-                      </p>
+                        <p>
+                          {entry.servings} ×{" "}
+                          {entry.servingDescription || "serving"}
+                        </p>
 
-                      <p>
-                        Calories: {Number(entry.calories ?? 0).toFixed(1)} kcal
-                      </p>
+                        <p>Calories: {entry.calories} kcal</p>
+                        <p>Protein: {entry.protein} g</p>
+                        <p>Carbohydrates: {entry.carbs} g</p>
+                        <p>Total fat: {entry.fat} g</p>
+                        <p>Saturated fat: {entry.saturatedFat} g</p>
+                        <p>Fiber: {entry.fiber} g</p>
+                        <p>Sugar: {entry.sugar} g</p>
+                        <p>Sodium: {entry.sodium} mg</p>
+                      </div>
 
-                      <p>Protein: {Number(entry.protein ?? 0).toFixed(1)} g</p>
-
-                      <p>
-                        Carbohydrates: {Number(entry.carbs ?? 0).toFixed(1)} g
-                      </p>
-
-                      <p>Total fat: {Number(entry.fat ?? 0).toFixed(1)} g</p>
-
-                      <p>
-                        Saturated fat:{" "}
-                        {Number(entry.saturatedFat ?? 0).toFixed(1)} g
-                      </p>
-
-                      <p>Fiber: {Number(entry.fiber ?? 0).toFixed(1)} g</p>
-
-                      <p>Sugar: {Number(entry.sugar ?? 0).toFixed(1)} g</p>
-
-                      <p>Sodium: {Number(entry.sodium ?? 0).toFixed(1)} mg</p>
+                      <button
+                        type="button"
+                        onClick={() => removeFromDiary(entry.id)}
+                      >
+                        Remove
+                      </button>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => removeFromDiary(entry.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             );
-          })
-        )}
-      </section>
+          })}
+</div>
+    )}
+  </section>
+  </section>
+)}
 
-      {/* MAINTENANCE CALORIES */}
-      <section className="panel">
-        <MaintenanceCaloriesForm onResult={handleGoalResult} />
-      </section>
+ <p className="protein-goal-number">
 
-      {/* PROTEIN CALCULATOR */}
-      <section className="panel">
-        <ProteinCalculator maintenanceResult={goalResult} />
-      </section>
+    {proteinGoal !== null ? `${proteinGoal} g` : "Not set"}
+  </p>
+
+
+<section className="protein-goal-card">
+
+  <button
+    type="button"
+    onClick={() => setShowProteinForm(true)}
+  >
+    {proteinGoal !== null ? "Edit Protein Goal" : "Set Protein Goal"}
+  </button>
+</section>
+
+{showProteinForm && (
+  <section className="protein-form-panel">
+    <button
+      type="button"
+      onClick={() => setShowProteinForm(false)}
+    >
+      ← Back
+    </button>
+
+    <ProteinCalculator
+      maintenanceResult={goalResult}
+      onResult={handleProteinGoal}
+    />
+
+    
+  </section>
+)}
+          
+        
+
+    
     </main>
-  );
+  )
 }
+
 
 export default App;

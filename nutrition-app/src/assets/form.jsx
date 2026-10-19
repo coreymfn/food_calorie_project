@@ -64,7 +64,6 @@ function MaintenanceCaloriesForm({ onResult }) {
       age,
       goalType,
       pounds,
-      weeks,
     } = goalForm;
     const calculatedWeeks =
       goalType === "maintain"
@@ -103,15 +102,25 @@ function MaintenanceCaloriesForm({ onResult }) {
     );
     onResult?.(sharedResult);
   }
+
+
+function handleEditGoal() {
+  setResult(null);
+  localStorage.removeItem("maintenanceGoalResult");
+  onResult?.(null);
+}
+
   return (
-    <section>
-      <h2>Maintenance Calories and Weight Goals</h2>
+      <section>
+      {!result ? (
+      // Show the form when there are no results
+      <form className="formy" onSubmit={handleGoalSubmit}>
+        <h2>Maintenance Calories and Weight Goals</h2>
 
       <p>
         Enter your information to estimate your daily maintenance
         calories and set a weight goal.
       </p>
-      <form onSubmit={handleGoalSubmit}>
         <div>
           <label htmlFor="height">Height (cm)</label>
           <input
@@ -252,75 +261,88 @@ function MaintenanceCaloriesForm({ onResult }) {
         )}
         <button type="submit">Calculate Calories</button>
       </form>
-      {result && (
-        <section aria-live="polite">
-          {result.error ? (
-            <>
-              <h3>Check Your Information</h3>
-              <p>{result.error}</p>
+  
+) : (
+  // Show the results when result exists
+  <section className="result-From-Calcs" aria-live="polite">
+    {result.error ? (
+      <>
+        <h3>Check Your Information</h3>
+        <p>{result.error}</p>
 
-              {result.maintenanceCalories != null && (
-                <p>
-                  Estimated maintenance calories:{" "}
-                  <strong>
-                    {result.maintenanceCalories.toLocaleString()} kcal/day
-                  </strong>
-                </p>
-              )}
-              {result.warnings?.map((warning, index) => (
-                <p key={index}>{warning}</p>
-              ))}
-            </>
-          ) : (
-            <>
-              <h3>Your Estimated Results</h3>
-              <p>
-                <strong>Maintenance Calories:</strong>{" "}
-                {result.maintenanceCalories.toLocaleString()} kcal/day
-              </p>
-              <p>
-                <strong>Daily Calorie Goal:</strong>{" "}
-                {result.goalCalories.toLocaleString()} kcal/day
-              </p>
-              <p>
-                <strong>Weight Goal:</strong>{" "}
-                {result.goalType === "lose"
-                  ? "Lose Weight"
-                  : result.goalType === "gain"
-                    ? "Gain Weight"
-                    : "Maintain Weight"}
-              </p>
-              {result.goalType !== "maintain" && (
-                <>
-                  <p>
-                    <strong>Daily Calorie Adjustment:</strong>{" "}
-                    {result.dailyAdjustment.toLocaleString()} kcal{" "}
-                    {result.goalType === "lose" ? "below" : "above"} maintenance
-                  </p>
+        {result.maintenanceCalories != null && (
+          <p>
+            Estimated maintenance calories:{" "}
+            <strong>
+              {result.maintenanceCalories.toLocaleString()} kcal/day
+            </strong>
+          </p>
+        )}
 
-                  <p>
-                    <strong>Planned Weekly Change:</strong>{" "}
-                    {result.poundsPerWeek} lb/week
-                  </p>
+        {result.warnings?.map((warning, index) => (
+          <p key={index}>{warning}</p>
+        ))}
+      </>
+    ) : (
+      <>
+        <h3>Your Estimated Results</h3>
 
-                  <p>
-                    <strong>Timeframe:</strong> {result.weeks} weeks
-                  </p>
-                </>
-              )}
-              {result.warnings?.map((warning, index) => (
-                <p key={index}>{warning}</p>
-              ))}
-              <p>
-                These are estimates, not medical advice. Actual calorie
-                needs vary. Consult a qualified healthcare professional
-                for individualized guidance.
-              </p>
-            </>
-          )}
-        </section>
-      )}
-    </section>
-  );
-}
+        <p>
+          <strong>Maintenance Calories:</strong>{" "}
+          {result.maintenanceCalories.toLocaleString()} kcal/day
+        </p>
+
+        <p>
+          <strong>Daily Calorie Goal:</strong>{" "}
+          {result.goalCalories.toLocaleString()} kcal/day
+        </p>
+
+        <p>
+          <strong>Weight Goal:</strong>{" "}
+          {result.goalType === "lose"
+            ? "Lose Weight"
+            : result.goalType === "gain"
+              ? "Gain Weight"
+              : "Maintain Weight"}
+        </p>
+
+        {result.goalType !== "maintain" && (
+          <>
+            <p>
+              <strong>Daily Calorie Adjustment:</strong>{" "}
+              {result.dailyAdjustment.toLocaleString()} kcal{" "}
+              {result.goalType === "lose" ? "below" : "above"} maintenance
+            </p>
+
+            <p>
+              <strong>Planned Weekly Change:</strong>{" "}
+              {result.poundsPerWeek} lb/week
+            </p>
+
+            <p>
+              <strong>Timeframe:</strong> {result.weeks} weeks
+            </p>
+          </>
+        )}
+
+        {result.warnings?.map((warning, index) => (
+          <p key={index}>{warning}</p>
+        ))}
+
+        <p>
+          These are estimates, not medical advice. Actual calorie
+          needs vary. Consult a qualified healthcare professional
+          for individualized guidance.
+        </p>
+      </>
+    )}
+
+    <button type="button"  className="edit-info-button" onClick={handleEditGoal}>
+      Edit Information
+    </button>
+  </section>
+)}
+</section>
+)}
+    
 export default MaintenanceCaloriesForm;

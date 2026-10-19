@@ -1,5 +1,5 @@
 
-function ProteinCalculator({ maintenanceResult }) {
+function ProteinCalculator({ maintenanceResult, onResult }) {
   if (!maintenanceResult) {
     return (
       <section>
@@ -79,6 +79,13 @@ function ProteinCalculator({ maintenanceResult }) {
       <p>
         <strong>Midpoint of range:</strong> {target} grams/day
       </p>
+
+      <button
+        type="button"
+        onClick={() => onResult?.(target)}
+      >
+        Set This as My Protein Goal
+      </button>
 
       <p>
         Protein values are general estimates, not personalized medical

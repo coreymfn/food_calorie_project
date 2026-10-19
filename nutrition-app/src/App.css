@@ -5,23 +5,79 @@
 :root {
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   color: #26352c;
-  background: #f5f7f1;
+  background-image: url(./assets/Background/est\ Background.png);
+  background-size: 100vw 100vh;
+  background-position: center;
+  background-repeat: no-repeat;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --color-background: #f5f7f1;
-  --color-card: #ffffff;
-  --color-primary: #52785b;
-  --color-primary-dark: #36563e;
-  --color-primary-light: #e7f0e5;
-  --color-accent: #d8a45b;
-  --color-text: #26352c;
-  --color-muted: #718075;
-  --color-border: #e1e8df;
-  --color-danger: #b54747;
+  /* Main backgrounds */
+  --background: #F4E5C9;
+  --background-section: #E7BD72;
+  --background-panel: #877044;
+  --background-hover: #C98B48;
+
+  /* Cards and content panels */
+  --card-background: #FFFFFF;
+  --card-secondary: #F7EED9;
+  --card-hover: #C99E6B;
+  --card-active: #A67C52;
+
+  /* Text */
+  --text-primary: #4A3428;
+  --text-secondary: #877044;
+  --text-muted: #A18A6B;
+  --text-placeholder: #B7A58A;
+  --text-disabled: #DED3C1;
+
+  /* Buttons */
+  --button-primary: #C98B48;
+  --button-primary-hover: #A97C45;
+  --button-primary-active: #877044;
+  --button-secondary: #E7BD72;
+  --button-disabled: #F8F1E2;
+
+  /* Borders and dividers */
+  --border: #C9D4C3;
+  --border-card: #D9C7A6;
+  --border-input: #B89B73;
+  --divider: #C9D4C3;
+
+  /* Accent colors */
+  --accent-amber: #C98B48;
+  --accent-honey: #E7BD72;
+  --accent-wood: #877044;
+  --accent-olive: #68703D;
+  --accent-linen: #F4E5C9;
+  --accent-espresso: #4A3428;
+
+  /* Status colors */
+  --color-success: #68703D;
+  --color-warning: #E7BD72;
+  --color-error: #B94F35;
+  --color-info: #8A9E78;
+
+  /* Inputs */
+  --input-background: #FFFFFF;
+  --input-focus: #C98B48;
+  --input-border: #B89B73;
+
+  /* Shadows */
+  --shadow-color: rgba(74, 52, 40, 0.18);
+  --shadow-card: 0 4px 12px var(--shadow-color);
+  --shadow-hover: 0 6px 16px var(--shadow-color);
+
+  /* General UI */
+  --border-radius: 12px;
+  --border-radius-small: 6px;
+  --border-radius-large: 20px;
+
+  --transition-speed: 0.25s;
+
 
   --radius-card: 18px;
   --radius-control: 10px;
@@ -33,11 +89,18 @@
   box-sizing: border-box;
 }
 
+html,
+body{
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+} 
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--color-background);
 }
 
 body,
@@ -46,6 +109,7 @@ input,
 select,
 textarea {
   font-family: inherit;
+  color: var(--accent-linen);
 }
 
 button,
@@ -80,6 +144,7 @@ p {
   margin-top: 0;
 }
 
+
 p {
   line-height: 1.6;
 }
@@ -93,63 +158,162 @@ p {
 ======================================== */
 
 .app {
-  width: min(1180px, 92%);
+  
+  width: 100%;
+  min-height: 100vh;
+}
+
+.goal-number{
+
+}
+
+.remaining-cal{
+
+}
+
+
+
+.goal-card.calorie-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  background-color: transparent;
+  border: none;
+
+}
+
+.goal-card.calorie-card h3,
+.goal-card.calorie-card p {
+  text-align: center;
+}
+
+.goal-card.calorie-card h3{
+  font-size: 5em;
   margin: 0 auto;
-  padding: 35px 0 60px;
+  letter-spacing: .3em;
 }
 
-.app-header {
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 28px;
-  padding: 42px 38px;
-  color: white;
-  background: linear-gradient(125deg, #36563e 0%, #52785b 60%, #779675 100%);
-  border-radius: 24px;
-  box-shadow: var(--shadow-card);
+
+.calorie-character {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  margin-top: auto;
 }
 
-.app-header::after {
-  content: "";
+.calorie-character img {
+  width: 30vw;
+  height: auto;
+}
+
+/* Clickable block that opens the form */
+.goal-form-block {
   position: absolute;
-  width: 220px;
-  height: 220px;
-  right: -45px;
-  top: -90px;
-  border: 35px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  pointer-events: none;
+  top: 25%;
+  left: 0%;
+  background-color: var(--accent-olive);
+  border: none;
+  
 }
 
-.app-header h1 {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 10px;
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 750;
-  letter-spacing: -1.2px;
+.goal-form-block{
+  width: auto;
+  height: auto;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
 }
 
-.app-header p {
-  position: relative;
-  z-index: 1;
-  max-width: 550px;
-  margin-bottom: 0;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 1.05rem;
+.goal-form-block:hover {
+  transform: translateY(-3px);
+  
 }
+
+/* The popup itself */
+.goal-modal-backdrop{
+    display: flex;
+    justify-self: center;
+    align-items: center;
+
+    position: absolute;
+    top: 0%;
+
+    width: 80vw;
+    max-width: 700px;
+    max-height: 90vh;
+    z-index: 99999;
+    background-color: transparent;
+}
+
+.goal-model-backdrop .results-shown {
+  background-color: transparent;
+}
+
+.goal-modal {
+    width: 80vw;
+    max-width: 700px;
+    max-height: 90vh;
+
+    background-color: ;
+    padding: 20px;
+    border-radius: var(--radius-card);
+    color: var(--color-text);
+}
+
+/* Close button */
+.goal-modal-close {
+    display: block;
+    margin-left: auto;
+    margin-bottom: 15px;
+    cursor: pointer;
+    background-color: var(--accent-espresso);
+}
+
+/* Form inside popup */
+.goal-modal-content {
+    width: 100%;
+    background-color: var(--accent-honey);
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.goal-modal-content form {
+    width: 100%;
+}
+
+.result-From-Calcs{
+  position: absolute;
+  top:70%;
+  right:;
+  background-color: var(--card-hover);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.edit-info-button{
+
+}
+
+
 
 /* ========================================
    PANELS AND SECTION HEADINGS
 ======================================== */
 
+
 .panel {
   margin-bottom: 24px;
   padding: 28px;
-  background: var(--color-card);
+  background: ;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  scrollbar-width: none;
 }
 
 .panel > h2 {
@@ -172,6 +336,16 @@ p {
 /* ========================================
    LABELS AND FORM CONTROLS
 ======================================== */
+.custom-button{
+  background-color: var(--accent-espresso);
+
+}
+
+.create-custom{
+  background-color: var(--accent-espresso);
+  border: 1px solid var(--accent-linen);
+}
+
 
 label {
   display: block;
@@ -181,15 +355,32 @@ label {
   font-weight: 650;
 }
 
+.custom-food-card{
+  background-color: var(--background-section);
+  margin:10px 0 ;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+}
+
 input,
 select,
 textarea {
-  width: 100%;
+  width: 10vw;
   min-width: 0;
   padding: 12px 14px;
   color: var(--color-text);
-  background: #fff;
-  border: 1px solid #d6dfd4;
+  background: var(--text-primary);
+  border: 1px solid var(--accent-linen);
   border-radius: var(--radius-control);
   transition:
     border-color 0.2s ease,
@@ -206,6 +397,14 @@ input:hover,
 select:hover,
 textarea:hover {
   border-color: #a9bca8;
+  background-color: var(--background-panel);
+}
+
+input ,
+select,
+textarea {
+  color: var(--text-disabled);
+
 }
 
 input:focus,
@@ -238,9 +437,10 @@ form > label {
    BUTTONS
 ======================================== */
 
+
 button {
   padding: 11px 18px;
-  color: white;
+  color: var(--accent-linen);
   font-weight: 650;
   background: var(--color-primary);
   border: 1px solid var(--color-primary);
@@ -266,125 +466,197 @@ button:disabled {
   box-shadow: none;
 }
 
+
+
 /* ========================================
    FOOD SEARCH
 ======================================== */
 
+.food-search-toggle{
+  position: absolute;
+  top: 22%;
+  right: 33%;
+  width: 5%;
+  height: 7%;
+  background-color: var(--accent-espresso);
+  padding: 5px;
+}
+
+.searchbox {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  top: 20%;
+  right: 2%;
+  background-color: transparent;
+}
+
+.searchbar{
+  color:  var(--accent-linen);
+}
+
+/* Search bar layout */
 .search-row {
   display: flex;
-  align-items: stretch;
-  gap: 12px;
-}
-
-.search-row input {
-  flex: 1;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 600px;
   min-width: 0;
+  color: var(--accent-linen);
 }
 
+  .food-results-toolbar > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.food-results-toolbar{
+  background-color: transparent;
+}
+
+.food-results{
+  
+  
+}
+
+.dairy-button{
+  background-color: var(--accent-olive);
+}
+
+.food-results-count{
+  color: var(--accent-linen);
+}
+
+/* Container holding the food result cards */
+.food-results-list {
+  background-color: ;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+
+
+
+/* Style the dropdown controls */
+
+
+.food-results-toolbar select {
+  color: var(--accent-linen);
+  background-color: var(--accent-espresso);
+  border: 1px solid ;
+  color-scheme: light;;
+}
+
+/* Style the options inside the dropdown */
+.food-results-toolbar select option {
+  color: #222;
+  background-color: var(--accent-linen);
+}
+
+/* Style the selected option */
+.food-results-toolbar select option:checked {
+  background-color: var(--accent-amber);
+  color: var(--accent-linen);
+}
+
+
+
+
+/* Long rectangular search input */
+.search-row #food-search {
+  flex: 1 1 0;
+  width: 15vw;
+  min-width: 0;
+  max-width: none;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid #cbd5cb;
+  border-radius: 6px;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: var(--accent-olive);
+  color: var(--accent-linen);
+}
+
+/* Keep the Search button from shrinking */
 .search-row button {
-  flex-shrink: 0;
-  min-width: 115px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  height: 5vh;
+  width: 5vw;
+  background-color: var(--accent-espresso);
+  border: 1px solid var(--accent-linen);
 }
 
-.food-results {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-border);
-}
-
-.food-results h3 {
-  margin-bottom: 14px;
-  font-size: 1.05rem;
+/* Compact results while preserving all the information */
+.food-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 600px;;
 }
 
 .food-result {
   display: flex;
-  width: 100%;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px;
-  margin-bottom: 9px;
-  padding: 15px 17px;
-  color: var(--color-text);
-  text-align: left;
-  background: #fbfcf9;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-}
-
-.food-result:hover {
-  color: var(--color-primary-dark);
-  background: var(--color-primary-light);
-  border-color: #bfd0bb;
-  box-shadow: none;
-}
-
-.food-result span {
-  font-weight: 650;
-  line-height: 1.45;
-}
-
-.food-result small {
-  color: var(--color-muted);
-  font-size: 0.83rem;
-  font-weight: 400;
-}
-
-/* ========================================
-   SELECTED FOOD AND SERVING DETAILS
-======================================== */
-
-.selected-food-layout {
-  margin-top: 26px;
-  padding: 24px;
-  background: #f7faf5;
-  border: 1px solid #dce8d9;
-  border-radius: 15px;
-}
-
-.selected-food-layout h3 {
-  margin-bottom: 8px;
-  font-size: 1.25rem;
-  line-height: 1.4;
-}
-
-.selected-food-layout > p {
-  margin-bottom: 20px;
-  color: var(--color-muted);
-}
-
-.selected-food-layout label {
-  margin-top: 18px;
-}
-
-.selected-food-layout select,
-.selected-food-layout input {
-  max-width: 420px;
-}
-
-.selected-food-layout ul {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 0;
-  margin: 0 0 24px;
-  list-style: none;
-}
-
-.selected-food-layout li {
-  padding: 12px;
-  color: #405144;
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.selected-food-layout > button {
+  gap: 4px;
   width: 100%;
-  max-width: 300px;
+  min-width: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+  background-color: var(--accent-honey);
 }
+
+.food-result-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.food-result-meta {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.food-result-select {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+
+@media (max-width: 700px) {
+  .goals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+
+/* Keep the layout usable on small screens */
+@media (max-width: 480px) {
+  .search-row {
+    gap: 6px;
+  }
+
+  .search-row button {
+    padding-inline: 10px;
+  }
+}
+
 
 /* ========================================
    ERROR MESSAGES
@@ -405,7 +677,7 @@ button:disabled {
 ======================================== */
 
 .daily-summary {
-  margin-top: 24px;
+  margin-top: -3%;
 }
 
 .goals-grid {
@@ -417,7 +689,7 @@ button:disabled {
 .goal-card {
   min-width: 0;
   padding: 20px 16px;
-  background: #f7faf5;
+  background: var(--border-input);
   border: 1px solid #e1e9de;
   border-radius: 14px;
   transition:
@@ -442,7 +714,7 @@ button:disabled {
 
 .goal-card p {
   margin-bottom: 0;
-  color: var(--color-primary-dark);
+  color: var(--accent-linen);
   font-size: clamp(1.1rem, 2vw, 1.55rem);
   font-weight: 750;
   overflow-wrap: anywhere;
@@ -474,6 +746,7 @@ button:disabled {
   background: #fbfcf9;
   border: 1px solid var(--color-border);
   border-radius: 13px;
+  
 }
 
 .diary-entry > div {
@@ -563,6 +836,21 @@ button:disabled {
 .panel th {
   color: var(--color-primary-dark);
   background: #f7faf5;
+}
+
+.selected-food-layout{
+  position:absolute;
+  /* display: flex;
+  align-self: flex-start;
+  flex-wrap: wrap; */
+  width: 30vw;
+  margin-top: 10%;
+}
+
+.back-to-search-button{
+  display: flex;
+  justify-self: end;
+  
 }
 
 /* ========================================
@@ -718,20 +1006,21 @@ button:disabled {
 
 .food-results-count {
   margin: 12px 0;
-  color: var(--color-muted);
-  font-size: 0.88rem;
+  color: orange;
+  font-size: 0.92rem;
+  text-align: center;
 }
 
 /* Scroll inside the results instead of expanding the page. */
 .food-results-list {
-  max-height: 480px;
+  max-height: 56vh;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px 8px 4px 2px;
-  border: 1px solid var(--color-border);
+ 
   border-radius: 13px;
-  background: #fff;
-  scrollbar-width: thin;
+  background: transparent;
+  scrollbar-width: none;
   scrollbar-color: #a9bca8 #f1f4ef;
 }
 
@@ -846,12 +1135,13 @@ button:disabled {
 
 .diary-meal {
   margin-top: 24px;
+  background-color: var(--accent-olive));
 }
 
 .diary-meal h3 {
   padding-bottom: 8px;
   margin-bottom: 12px;
-  color: #354b38;
+  color: var(--accent-linen);
   border-bottom: 2px solid #dce6d5;
 }
 
@@ -864,7 +1154,7 @@ button:disabled {
   padding: 16px;
   margin-bottom: 12px;
 
-  background: #f8f7f0;
+  background: var(--background-section);
   border: 1px solid #dce3d5;
   border-radius: 12px;
 }
@@ -873,11 +1163,16 @@ button:disabled {
   margin: 6px 0;
   line-height: 1.5;
   overflow-wrap: anywhere;
+  color: var(--accent-linen);
 }
 
 .diary-entry button {
   flex-shrink: 0;
+  background-color: var(--accent-olive);
+  color: var(--background);
 }
+
+
 
 /* ==================================
    RESPONSIVE DIARY
@@ -895,4 +1190,404 @@ button:disabled {
   .diary-entry button {
     align-self: flex-start;
   }
+}
+
+.panel-stats .goals-grid{
+  display: grid;
+  grid-template-columns: repeat(2, 5%);
+  gap: 45%;
+  
+
+}
+
+
+.panel-stats .daily-summary {
+  position: absolute;
+  top: 18%;
+  right: -45%;
+  width:130vw;
+  z-index: -1;
+}
+
+.dairy-button{
+  position:absolute;
+  top: 50%;
+  left: 0%;
+}
+
+.date-select{
+  display: flex;
+  justify-content: center ;
+}
+
+/* Main Food Diary: no internal scrolling */
+.food-diary {
+  position: absolute;
+  top: 2%;
+  right: 10%;
+  width: 100%;
+  max-width: 75vw;
+  margin: 20px auto;
+  padding: 24px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: var(--background-section);
+  color: var(--accent-espresso);
+
+  overflow: none;
+  max-height: none;
+
+  z-index: 99999;
+}
+
+/* Three-column meal layout */
+.diary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  align-items: start;
+}
+
+/* Each meal gets its own scroll area */
+.diary-meal {
+  min-width: 0;
+  height: 450px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 16px;
+  border: 1px solid #d9ded8;
+  border-radius: 12px;
+  background: var(--border-input);
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+/* Keep the meal heading visible while scrolling */
+.diary-meal h3 {
+  position: sticky;
+  top: -16px;
+  z-index: 2;
+  margin: -16px -16px 16px;
+  padding: 16px;
+  background: var(--accent-wood);
+  border-bottom: 1px solid #e4e4e4;
+}
+
+/* Individual food entries */
+.diary-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
+  background: var(--text-muted);
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+.load-more-button{
+  background-color: var(--accent-olive);
+  color: var(--accent-linen);
+}
+
+.diary-entry-info {
+  width: 100%;
+  min-width: 0;
+}
+
+.diary-entry-info p {
+  margin: 8px 0;
+  font-size: .9em;
+}
+
+.diary-entry button {
+  align-self: flex-start;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .diary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 550px) {
+  .food-diary {
+    padding: 12px;
+  }
+
+  .diary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diary-meal {
+    height: 350px;
+  }
+}
+
+.diary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  align-items: start;
+}
+
+/* Top row: three equally sized meal cards */
+.diary-meal--breakfast,
+.diary-meal--lunch,
+.diary-meal--dinner {
+  grid-column: span 2;
+}
+
+/* Bottom row: Snacks centered under the top row */
+.diary-meal--snacks {
+  grid-column: 3 / span 2;
+}
+
+/* Each meal scrolls independently */
+.diary-meal {
+  height: 450px;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+  .diary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diary-meal--breakfast,
+  .diary-meal--lunch,
+  .diary-meal--dinner,
+  .diary-meal--snacks {
+    grid-column: span 1;
+  }
+
+  .diary-meal--snacks {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 8px);
+  }
+}
+
+@media (max-width: 550px) {
+  .diary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diary-meal--snacks {
+    grid-column: auto;
+    width: 100%;
+  }
+
+  .diary-meal {
+    height: 350px;
+  }
+}
+
+.diary-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #e8eee7;
+  color: #263238;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.diary-back-button:hover {
+  background: #d6e2d4;
+  transform: translateX(-3px);
+}
+
+
+/* ================================
+   PROTEIN GOAL CARD
+================================ */
+
+.protein-goal-card {
+position:absolute;
+top: 75%;
+left: 0%;
+
+}
+
+.protein-goal-card h2 {
+  margin: 0 0 12px;
+  color: var(--accent-amber);
+  font-size: 1.5rem;
+}
+
+.protein-goal-number {
+  margin: 16px 0 22px;
+  background-color: var(--accent-espresso);
+  color: var(--text-secondary);
+  font-size: 2.0rem;
+  font-weight: 800;
+  border-radius: 16px;
+  position:absolute;
+  top: 22%;
+  left: 16%;
+  z-index: -9999;
+
+
+}
+
+/* ================================
+   PROTEIN BUTTONS
+================================ */
+
+.protein-goal-card button,
+.protein-form-panel button {
+  padding: 12px 22px;
+  border: none;
+  border-radius: 12px;
+
+  background: var(--accent-olive);
+  color: var(--accent-linen);
+
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.protein-goal-card button:hover,
+.protein-form-panel button:hover {
+  background: var(--color-info);
+  box-shadow: 0 5px 12px rgba(75, 45, 90, 0.2);
+  transform: translateY(-2px);
+}
+
+.protein-goal-card button:focus-visible,
+.protein-form-panel button:focus-visible {
+  outline: 3px solid #c9a5dc;
+  outline-offset: 3px;
+}
+
+/* ================================
+   PROTEIN CALCULATOR PANEL
+================================ */
+
+.protein-form-panel {
+  width: min(100% - 32px, 650px);
+  margin: 24px auto 40px;
+  padding: 28px;
+  box-sizing: border-box;
+
+  background-color: var(--background-section);
+  border: 2px solid var(--background);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(75, 45, 90, 0.14);
+
+  color: #38313d;
+  line-height: 1.6;
+
+  position:absolute;
+  top: 10%;
+  right: 30%;
+}
+
+.protein-form-panel h2 {
+  margin-top: 0;
+  color: var(--background-panel);
+  font-size: 1.7rem;
+  text-align: center;
+}
+
+.protein-form-panel h3 {
+  margin-top: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eadfee;
+  color: var(--background-panel);
+}
+
+.protein-form-panel p {
+  margin: 12px 0;
+}
+
+.protein-form-panel strong {
+  color: var(--accent-linen);
+}
+
+/* Set protein goal button inside calculator */
+
+.protein-form-panel button {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+}
+
+/* Back button */
+
+.protein-form-panel > button:first-child {
+  display: inline-block;
+  width: auto;
+  margin: 0 0 18px;
+  padding: 9px 15px;
+
+  background: var(--accent-espresso);
+  color: var(--accent-linen);
+}
+
+.protein-form-panel > button:first-child:hover {
+  background: #e0d1e9;
+}
+
+/* ================================
+   MOBILE LAYOUT
+================================ */
+
+@media (max-width: 480px) {
+  .protein-goal-card {
+    padding: 22px 16px;
+  }
+
+  .protein-goal-card h2 {
+    font-size: 1.3rem;
+  }
+
+  .protein-goal-number {
+    font-size: 2rem;
+  }
+
+  .protein-form-panel {
+    padding: 20px 16px;
+  }
+
+  .protein-form-panel h2 {
+    font-size: 1.4rem;
+  }
+}
+
+
+
+
+.goal-display.goal-number{
+  font-size: large;
+}
+
+.goal-display{
+
 }

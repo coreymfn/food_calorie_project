@@ -122,6 +122,7 @@ function CustomFood({ selectedMeal, onAddToDiary }) {
     <section className="panel custom-food-section">
       <button
         type="button"
+        className="create-custom"
         onClick={() => setIsFormOpen((previous) => !previous)}
         aria-expanded={isFormOpen}
       >
