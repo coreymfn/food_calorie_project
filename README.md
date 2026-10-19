@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img width="30%" src="Fitty.png" alt="Fitty!">
+  <img width="30%" src="/food_calorie_project/nutrition-app/src/assets/Icons/Fitty.png" alt="Fitty!">
 
   # My Fitty
 
@@ -10,7 +10,7 @@
 
   | COLOR PALETTE | DEMO |
   |:---:|:---:|
-  | ![Color Palette](templateImage.png) | ![Demo](example-here-is-a-sample.gif) |
+  | ![Color Palette](/food_calorie_project/nutrition-app/src/assets/Icons/Warm%20Earth-Tone%20Color%20Palette.png) | ![Demo](/food_calorie_project/nutrition-app/src/assets/Icons/Goal%202,229%20kcal%20~Current~%200.0%20Kcal%20￼%20(1).gif) |
 
 </div>
 
