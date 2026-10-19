@@ -10,7 +10,7 @@
 
   | COLOR PALETTE | DEMO |
   |:---:|:---:|
-  | ![Color Palette](templateImage.png) | ![Demo](example-here-is-a-sample.gif) |
+  | ![Color Palette](./nutrition-app/Warm%20Earth-Tone%20Color%20Palette.png) | ![Demo](./nutrition-app/Goal%202,229%20kcal%20~Current~%200.0%20Kcal%20￼%20(1).gif) |
 
 </div>
 
