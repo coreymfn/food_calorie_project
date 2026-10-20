@@ -10,7 +10,7 @@
 
   | COLOR PALETTE | DEMO |
   |:---:|:---:|
-  | ![Color Palette](./nutrition-app/Warm%20Earth-Tone%20Color%20Palette.png) | ![Demo](./nutrition-app/Recording%202026-10-20%20084122.mp4) |
+  | ![Color Palette](./nutrition-app/Warm%20Earth-Tone%20Color%20Palette.png) | ![Demo](./nutrition-app/Recording_2026-10-20_084122.gif) |
 
 </div>
 
